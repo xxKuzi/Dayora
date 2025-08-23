@@ -1,69 +1,50 @@
-# React + TypeScript + Vite
+# Dayora
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> A lightweight React note-taking app focused on **speed**, **clarity**, and **AI organization**.
 
-Currently, two official plugins are available:
+👉 **Use Dayora at:** https://dayora.cz
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+![Dayora screenshot](./Dayora-screenshot.png)
 
-## Expanding the ESLint configuration
+![Dayora screenshot](./Dayora-scheme.png)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## ✨ Features
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+- **AI Day Planner** turns your quick notes into a personalized daily schedule
+- **Clean, distraction-free UI** with folders (Notes, Ideas, Trash) and quick search
+- **Pin & delete** notes with one click
+- **Dark theme** out of the box
+- **Sync & auth** with Firebase (Email & Google sign-in)
+- **Tailwind CSS** for fast, consistent styling
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+
+## 🧰 Tech Stack
+
+- **React + Vite**
+- **Firebase** (Auth + Firestore/Realtime DB)
+- **Tailwind CSS**
+
+## 🗂️ Project Structure (example)
+
+```
+src/
+ ├─ components/      # UI building blocks
+ ├─ pages/           # Screens / views
+ ├─ lib/             # Firebase & helpers
+ ├─ styles/          # Tailwind config / utilities
+ └─ main.tsx|jsx     # App entry
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 📌 Roadmap
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- Tags & filters
+- Markdown support
+- Drag-and-drop reordering
+- Offline mode
+- Share/collaboration
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 📄 License
+
+Open source under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — an OSI-approved license. By contributing, you agree to license your contributions under the same license.
