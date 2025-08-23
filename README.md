@@ -4,7 +4,7 @@
 
 👉 **Use Dayora at:** https://dayora.cz
 
-![Dayora screenshot](./Dayora-screenshot.png)
+
 
 ![Dayora screenshot](./Dayora-scheme.png)
 
@@ -19,12 +19,15 @@
 - **Sync & auth** with Firebase (Email & Google sign-in)
 - **Tailwind CSS** for fast, consistent styling
 
+![Dayora screenshot](./Dayora-screenshot.png)
+<br><br>
 
 ## 🧰 Tech Stack
 
 - **React + Vite**
 - **Firebase** (Auth + Firestore/Realtime DB)
 - **Tailwind CSS**
+<br><br>
 
 ## 🗂️ Project Structure (example)
 
@@ -44,7 +47,7 @@ src/
 - Drag-and-drop reordering
 - Offline mode
 - Share/collaboration
+<br><br>
 
 ## 📄 License
-
 Open source under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — an OSI-approved license. By contributing, you agree to license your contributions under the same license.
