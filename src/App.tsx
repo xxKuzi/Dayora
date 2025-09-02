@@ -27,7 +27,7 @@ interface Folder {
 
 export default function App() {
   // ---- Persistence helpers ----
-  const STORAGE_KEY = "notes_like_app_v1";
+  const STORAGE_KEY = "dayora_v1";
   const load = (): any | null => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
