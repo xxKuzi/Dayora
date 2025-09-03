@@ -1,4 +1,4 @@
-import type { Note } from "../types";
+import type { Note, DarkMode } from "../types";
 import { timeAgo, preview } from "../utils";
 import { Button, Input } from "../components";
 
@@ -9,8 +9,9 @@ interface NotesListProps {
   onQueryChange: (query: string) => void;
   onNoteSelect: (noteId: string) => void;
   onNewNote: () => void;
-  onToggleDark: () => void;
-  dark: boolean;
+  onToggleDarkMode: () => void;
+  darkMode: DarkMode;
+  isDark: boolean;
 }
 
 export default function NotesList({
@@ -20,8 +21,9 @@ export default function NotesList({
   onQueryChange,
   onNoteSelect,
   onNewNote,
-  onToggleDark,
-  dark,
+  onToggleDarkMode,
+  darkMode,
+  isDark,
 }: NotesListProps) {
   return (
     <section className="w-80 border-r border-zinc-200 dark:border-zinc-800 p-3 flex flex-col">
@@ -35,8 +37,12 @@ export default function NotesList({
         <Button onClick={onNewNote} title="New note (Ctrl/Cmd+N)">
           New
         </Button>
-        <Button onClick={onToggleDark} title="Toggle light/dark">
-          {dark ? "☾" : "☀"}
+        <Button
+          onClick={onToggleDarkMode}
+          title={`Toggle theme mode (currently ${darkMode})`}
+          className="min-w-[44px]"
+        >
+          {darkMode === "light" ? "☀" : darkMode === "dark" ? "☾" : "🌓"}
         </Button>
       </div>
 

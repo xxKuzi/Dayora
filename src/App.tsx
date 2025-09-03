@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useDeferredValue } from "react";
 
-import type { Note, Folder, AppState } from "./types";
+import type { Note, Folder, AppState, DarkMode } from "./types";
 import { nid, fid, deriveTitleFromBody, load, save } from "./utils";
 import { Sidebar, NotesList, Editor } from "./parts";
 
@@ -43,7 +43,31 @@ export default function App() {
   );
   const [query, setQuery] = useState<string>(initial?.query ?? "");
   const deferredQuery = useDeferredValue(query);
-  const [dark, setDark] = useState<boolean>(initial?.dark ?? false);
+  const [darkMode, setDarkMode] = useState<DarkMode>(() => {
+    // Migrate from old boolean dark mode to new DarkMode type
+    if (initial?.darkMode) return initial.darkMode;
+    if (initial && 'dark' in initial && typeof initial.dark === 'boolean') {
+      return initial.dark ? 'dark' : 'light';
+    }
+    return 'auto';
+  });
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+
+  // Calculate if we should show dark mode
+  const isDark = darkMode === 'dark' || (darkMode === 'auto' && systemPrefersDark);
+
+  // Listen for system preference changes
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      setSystemPrefersDark(e.matches);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
 
   // Ensure Trash folder exists once and migrate notes without folderId
   useEffect(() => {
@@ -105,12 +129,12 @@ export default function App() {
   useEffect(() => {
     if (persistTimer.current) window.clearTimeout(persistTimer.current);
     persistTimer.current = window.setTimeout(() => {
-      save({ folders, notes, activeFolderId, activeNoteId, query, dark });
+      save({ folders, notes, activeFolderId, activeNoteId, query, darkMode });
     }, 300);
     return () => {
       if (persistTimer.current) window.clearTimeout(persistTimer.current);
     };
-  }, [folders, notes, activeFolderId, activeNoteId, query, dark]);
+  }, [folders, notes, activeFolderId, activeNoteId, query, darkMode]);
 
   // ---- Derived lists ----
   const visibleNotes = useMemo(() => {
@@ -244,8 +268,16 @@ export default function App() {
     );
   }
 
+  function handleToggleDarkMode() {
+    setDarkMode((current) => {
+      if (current === 'light') return 'dark';
+      if (current === 'dark') return 'auto';
+      return 'light';
+    });
+  }
+
   return (
-    <div className={"w-full h-screen flex " + (dark ? "dark" : "")}>
+    <div className={"w-full h-screen flex " + (isDark ? "dark" : "")}>
       <div className="w-full h-full flex bg-zinc-50 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
         <Sidebar
           folders={folders}
@@ -265,8 +297,9 @@ export default function App() {
           onQueryChange={setQuery}
           onNoteSelect={setActiveNoteId}
           onNewNote={handleNewNote}
-          onToggleDark={() => setDark((d) => !d)}
-          dark={dark}
+          onToggleDarkMode={handleToggleDarkMode}
+          darkMode={darkMode}
+          isDark={isDark}
         />
 
         <Editor

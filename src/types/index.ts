@@ -13,11 +13,13 @@ export interface Folder {
   name: string;
 }
 
+export type DarkMode = 'light' | 'dark' | 'auto';
+
 export interface AppState {
   folders: Folder[];
   notes: Note[];
   activeFolderId: string;
   activeNoteId: string | null;
   query: string;
-  dark: boolean;
+  darkMode: DarkMode;
 }
