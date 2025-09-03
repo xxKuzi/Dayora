@@ -27,7 +27,7 @@ export default function Sidebar({
     <aside className="w-60 border-r border-zinc-200 dark:border-zinc-800 p-3 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold tracking-wide uppercase opacity-70">
-          Folders
+          Folders | JEJIJEEJ
         </h2>
         <Button onClick={onNewFolder} size="sm">
           New
