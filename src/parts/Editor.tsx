@@ -97,7 +97,7 @@ export default function Editor({
       />
 
       <div className="pt-2 text-xs opacity-60">
-        Last edited bro {new Date(activeNote.updatedAt).toLocaleString()}
+        Last edited {new Date(activeNote.updatedAt).toLocaleString()}
       </div>
     </main>
   );
