@@ -46,27 +46,28 @@ export default function App() {
   const [darkMode, setDarkMode] = useState<DarkMode>(() => {
     // Migrate from old boolean dark mode to new DarkMode type
     if (initial?.darkMode) return initial.darkMode;
-    if (initial && 'dark' in initial && typeof initial.dark === 'boolean') {
-      return initial.dark ? 'dark' : 'light';
+    if (initial && "dark" in initial && typeof initial.dark === "boolean") {
+      return initial.dark ? "dark" : "light";
     }
-    return 'auto';
+    return "auto";
   });
   const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(
-    window.matchMedia('(prefers-color-scheme: dark)').matches
+    window.matchMedia("(prefers-color-scheme: dark)").matches
   );
 
   // Calculate if we should show dark mode
-  const isDark = darkMode === 'dark' || (darkMode === 'auto' && systemPrefersDark);
+  const isDark =
+    darkMode === "dark" || (darkMode === "auto" && systemPrefersDark);
 
   // Listen for system preference changes
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (e: MediaQueryListEvent) => {
       setSystemPrefersDark(e.matches);
     };
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
   // Ensure Trash folder exists once and migrate notes without folderId
@@ -270,9 +271,9 @@ export default function App() {
 
   function handleToggleDarkMode() {
     setDarkMode((current) => {
-      if (current === 'light') return 'dark';
-      if (current === 'dark') return 'auto';
-      return 'light';
+      if (current === "light") return "dark";
+      if (current === "dark") return "auto";
+      return "light";
     });
   }
 

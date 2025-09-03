@@ -13,7 +13,7 @@ export interface Folder {
   name: string;
 }
 
-export type DarkMode = 'light' | 'dark' | 'auto';
+export type DarkMode = "light" | "dark" | "auto";
 
 export interface AppState {
   folders: Folder[];
