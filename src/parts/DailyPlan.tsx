@@ -234,7 +234,7 @@ export default function DailyPlan({
     return (
       <div className="flex-1 p-6 bg-black text-white min-h-screen">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 pt-8">
             <h1 className="text-4xl font-bold mb-2">Daily Planning</h1>
             <p className="text-gray-400">Start your day with a clear plan</p>
           </div>
@@ -556,7 +556,7 @@ export default function DailyPlan({
     <div className="flex-1 p-6 bg-black text-white min-h-screen">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 pt-8">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-4xl font-bold text-white">Daily Plan</h1>

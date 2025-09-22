@@ -118,10 +118,8 @@ export default function Settings({
   return (
     <div className="flex-1 p-6 bg-gray-900 text-white min-h-screen">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Settings
-          </h1>
+        <div className="mb-8 pt-8">
+          <h1 className="text-4xl font-bold text-white mb-2">Settings</h1>
           <p className="text-gray-400">
             Customize your daily schedule, habits, and goals
           </p>
@@ -288,9 +286,7 @@ export default function Settings({
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h4 className="font-semibold text-white">
-                        {habit.name}
-                      </h4>
+                      <h4 className="font-semibold text-white">{habit.name}</h4>
                       {habit.description && (
                         <p className="text-sm text-gray-400 mt-1">
                           {habit.description}
@@ -362,13 +358,13 @@ export default function Settings({
                       type="number"
                       min="0"
                       max="100"
-                        value={newGoal.progress.toString()}
-                        onChange={(e) =>
-                          setNewGoal({
-                            ...newGoal,
-                            progress: parseInt(e.target.value) || 0,
-                          })
-                        }
+                      value={newGoal.progress.toString()}
+                      onChange={(e) =>
+                        setNewGoal({
+                          ...newGoal,
+                          progress: parseInt(e.target.value) || 0,
+                        })
+                      }
                     />
                   </div>
                 </div>
@@ -389,9 +385,7 @@ export default function Settings({
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <h4 className="font-semibold text-white">
-                        {goal.title}
-                      </h4>
+                      <h4 className="font-semibold text-white">{goal.title}</h4>
                       {goal.description && (
                         <p className="text-sm text-gray-400 mt-1">
                           {goal.description}
@@ -414,9 +408,7 @@ export default function Settings({
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">
-                        Progress
-                      </span>
+                      <span className="text-gray-400">Progress</span>
                       <span className="font-medium text-white">
                         {goal.progress}%
                       </span>

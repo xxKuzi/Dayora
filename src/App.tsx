@@ -8,6 +8,7 @@ import type {
   DailyPlan,
   UserSettings,
 } from "./types";
+import { Button } from "./components";
 import { nid, fid, deriveTitleFromBody, load, save } from "./utils";
 import {
   Sidebar,
@@ -71,6 +72,7 @@ export default function App() {
   );
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
   const [notesListVisible, setNotesListVisible] = useState<boolean>(true);
+  const [comfortableTyping, setComfortableTyping] = useState<boolean>(false);
   const [activeView, setActiveView] = useState<
     "notes" | "daily-plan" | "settings"
   >("notes");
@@ -460,6 +462,59 @@ export default function App() {
 
   return (
     <div className={"w-full h-screen flex " + (isDark ? "dark" : "")}>
+      {/* Fixed Toggle Buttons - Top Right Corner */}
+      <div className="fixed top-2 right-4 z-50 flex items-center gap-2">
+        <Button
+          onClick={handleToggleAllPanels}
+          title={`${
+            sidebarVisible || notesListVisible ? "Hide" : "Show"
+          } All Panels`}
+          size="sm"
+          className="!bg-blue-600 hover:!bg-blue-700 !text-white !border-blue-500 hover:!scale-100"
+        >
+          {sidebarVisible || notesListVisible ? "◀◀" : "▶▶"}
+        </Button>
+        {sidebarVisible || notesListVisible ? (
+          <>
+            <Button
+              onClick={() => setSidebarVisible(!sidebarVisible)}
+              title={`${sidebarVisible ? "Hide" : "Show"} Sidebar (Ctrl/Cmd+B)`}
+              size="sm"
+            >
+              {sidebarVisible ? "◀" : "▶"}
+            </Button>
+            <Button
+              onClick={() => setNotesListVisible(!notesListVisible)}
+              title={`${
+                notesListVisible ? "Hide" : "Show"
+              } Notes List (Ctrl/Cmd+N)`}
+              size="sm"
+            >
+              {notesListVisible ? "◀" : "▶"}
+            </Button>
+          </>
+        ) : (
+          /* Comfortable Typing Button - only when panels are hidden */
+          <Button
+            onClick={() => setComfortableTyping(!comfortableTyping)}
+            title={`${
+              comfortableTyping ? "Disable" : "Enable"
+            } Comfortable Typing`}
+            size="sm"
+            className="!bg-gray-600 hover:!bg-gray-700 !text-white !border-gray-500 hover:!scale-100 !rounded-full !w-8 !h-8 !p-0 flex items-center justify-center"
+          >
+            <div className="relative w-4 h-4">
+              {/* Outer circle */}
+              <div className="absolute inset-0 rounded-full border-2 border-white"></div>
+              {/* Inner fill - only visible when comfortable typing is active */}
+              {comfortableTyping && (
+                <div className="absolute inset-0.5 rounded-full bg-white"></div>
+              )}
+            </div>
+          </Button>
+        )}
+      </div>
+
       <div className="w-full h-full flex text-zinc-900 dark:text-zinc-100">
         {sidebarVisible && (
           <div className="fixed left-0 top-0 h-screen z-10">
@@ -487,6 +542,8 @@ export default function App() {
                 : "ml-80"
               : sidebarVisible
               ? "ml-60"
+              : comfortableTyping && !sidebarVisible && !notesListVisible
+              ? "ml-20"
               : ""
           }`}
         >
@@ -522,11 +579,6 @@ export default function App() {
                 onDeleteNote={handleDeleteNote}
                 onRestoreNote={handleRestoreNote}
                 onMoveNote={handleMoveNote}
-                sidebarVisible={sidebarVisible}
-                notesListVisible={notesListVisible}
-                onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}
-                onToggleNotesList={() => setNotesListVisible(!notesListVisible)}
-                onToggleAllPanels={handleToggleAllPanels}
               />
             </>
           )}
