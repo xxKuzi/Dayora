@@ -4,8 +4,6 @@
 
 👉 **Use Dayora at:** https://dayora.cz
 
-
-
 ![Dayora screenshot](./Dayora-scheme.png)
 
 ---
@@ -27,7 +25,8 @@
 - **React + Vite**
 - **Firebase** (Auth + Firestore/Realtime DB)
 - **Tailwind CSS**
-<br><br>
+- **Google Gemini AI** (Daily Plan Generation)
+  <br><br>
 
 ## 🗂️ Project Structure (example)
 
@@ -47,7 +46,8 @@ src/
 - Drag-and-drop reordering
 - Offline mode
 - Share/collaboration
-<br><br>
+  <br><br>
 
 ## 📄 License
+
 Open source under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — an OSI-approved license. By contributing, you agree to license your contributions under the same license.

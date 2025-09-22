@@ -1,8 +1,23 @@
 import { useEffect, useMemo, useRef, useState, useDeferredValue } from "react";
 
-import type { Note, Folder, AppState, DarkMode } from "./types";
+import type {
+  Note,
+  Folder,
+  AppState,
+  DarkMode,
+  DailyPlan,
+  UserSettings,
+} from "./types";
 import { nid, fid, deriveTitleFromBody, load, save } from "./utils";
-import { Sidebar, NotesList, Editor } from "./parts";
+import {
+  Sidebar,
+  NotesList,
+  Editor,
+  DailyPlan as DailyPlanComponent,
+  Settings,
+} from "./parts";
+import { CookieBanner } from "./components";
+import { initializeAI, getAIService } from "./services/ai";
 
 export default function App() {
   // ---- State ----
@@ -54,10 +69,54 @@ export default function App() {
   const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(
     window.matchMedia("(prefers-color-scheme: dark)").matches
   );
+  const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
+  const [notesListVisible, setNotesListVisible] = useState<boolean>(true);
+  const [activeView, setActiveView] = useState<
+    "notes" | "daily-plan" | "settings"
+  >("notes");
+  const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>(
+    initial?.dailyPlans ?? []
+  );
+  const [settings, setSettings] = useState<UserSettings>(
+    initial?.settings ?? {
+      mealTimes: {
+        breakfast: "08:00",
+        lunch: "12:30",
+        dinner: "19:00",
+      },
+      workHours: {
+        start: "09:00",
+        end: "17:00",
+      },
+      habits: [],
+      goals: [],
+    }
+  );
+  const [cookiesAccepted, setCookiesAccepted] = useState<boolean>(
+    initial?.cookiesAccepted ?? false
+  );
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // Calculate if we should show dark mode
   const isDark =
     darkMode === "dark" || (darkMode === "auto" && systemPrefersDark);
+
+  // Initialize AI service on component mount
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (apiKey) {
+      try {
+        initializeAI(apiKey);
+        setAiError(null);
+      } catch (error) {
+        console.error("Failed to initialize AI service:", error);
+        setAiError("Failed to initialize AI service");
+      }
+    } else {
+      console.warn("VITE_GEMINI_API_KEY not found in environment variables");
+      setAiError("AI API key not configured");
+    }
+  }, []);
 
   // Listen for system preference changes
   useEffect(() => {
@@ -68,6 +127,27 @@ export default function App() {
 
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  // Keyboard shortcuts for toggling sections
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case "b":
+            e.preventDefault();
+            setSidebarVisible((prev) => !prev);
+            break;
+          case "n":
+            e.preventDefault();
+            setNotesListVisible((prev) => !prev);
+            break;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Ensure Trash folder exists once and migrate notes without folderId
@@ -130,12 +210,32 @@ export default function App() {
   useEffect(() => {
     if (persistTimer.current) window.clearTimeout(persistTimer.current);
     persistTimer.current = window.setTimeout(() => {
-      save({ folders, notes, activeFolderId, activeNoteId, query, darkMode });
+      save({
+        folders,
+        notes,
+        activeFolderId,
+        activeNoteId,
+        query,
+        darkMode,
+        dailyPlans,
+        settings,
+        cookiesAccepted,
+      });
     }, 300);
     return () => {
       if (persistTimer.current) window.clearTimeout(persistTimer.current);
     };
-  }, [folders, notes, activeFolderId, activeNoteId, query, darkMode]);
+  }, [
+    folders,
+    notes,
+    activeFolderId,
+    activeNoteId,
+    query,
+    darkMode,
+    dailyPlans,
+    settings,
+    cookiesAccepted,
+  ]);
 
   // ---- Derived lists ----
   const visibleNotes = useMemo(() => {
@@ -277,45 +377,191 @@ export default function App() {
     });
   }
 
+  function handleToggleAllPanels() {
+    if (sidebarVisible || notesListVisible) {
+      // Hide both panels
+      setSidebarVisible(false);
+      setNotesListVisible(false);
+    } else {
+      // Show both panels
+      setSidebarVisible(true);
+      setNotesListVisible(true);
+    }
+  }
+
+  // Daily Plan handlers
+  function handleCreateDailyPlan(date: string) {
+    const newPlan: DailyPlan = {
+      id: `plan_${Math.random().toString(36).slice(2, 9)}`,
+      date,
+      tasks: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setDailyPlans((prev) => [newPlan, ...prev]);
+  }
+
+  function handleUpdateDailyPlan(updatedPlan: DailyPlan) {
+    setDailyPlans((prev) =>
+      prev.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan))
+    );
+  }
+
+  async function handleGenerateWithGemini(tasks: string) {
+    try {
+      setAiError(null);
+      const aiService = getAIService();
+      const generatedPlan = await aiService.generateDailyPlan(tasks, settings);
+
+      const today = new Date().toISOString().split("T")[0];
+      const existingPlan = dailyPlans.find((plan) => plan.date === today);
+
+      if (existingPlan) {
+        const updatedPlan = {
+          ...existingPlan,
+          tasks: [...existingPlan.tasks, ...generatedPlan.tasks],
+          updatedAt: Date.now(),
+        };
+        handleUpdateDailyPlan(updatedPlan);
+      } else {
+        const newPlan: DailyPlan = {
+          id: `plan_${Math.random().toString(36).slice(2, 9)}`,
+          date: today,
+          tasks: generatedPlan.tasks,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        setDailyPlans((prev) => [newPlan, ...prev]);
+      }
+    } catch (error) {
+      console.error("AI generation failed:", error);
+      setAiError(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate plan with AI"
+      );
+      // Don't automatically fall back - let user choose
+    }
+  }
+
+  // Settings handlers
+  function handleUpdateSettings(newSettings: UserSettings) {
+    setSettings(newSettings);
+  }
+
+  // Cookie handlers
+  function handleAcceptCookies() {
+    setCookiesAccepted(true);
+  }
+
+  function handleDeclineCookies() {
+    setCookiesAccepted(false);
+  }
+
   return (
     <div className={"w-full h-screen flex " + (isDark ? "dark" : "")}>
-      <div className="w-full h-full flex bg-zinc-50 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
-        <Sidebar
-          folders={folders}
-          activeFolderId={activeFolderId}
-          onFolderSelect={setActiveFolderId}
-          onNewFolder={handleNewFolder}
-          onRenameFolder={handleRenameFolder}
-          onDeleteFolder={handleDeleteFolder}
-          notes={notes}
-          trashId={trashId}
-        />
+      <div className="w-full h-full flex text-zinc-900 dark:text-zinc-100">
+        {sidebarVisible && (
+          <div className="fixed left-0 top-0 h-screen z-10">
+            <Sidebar
+              folders={folders}
+              activeFolderId={activeFolderId}
+              onFolderSelect={setActiveFolderId}
+              onNewFolder={handleNewFolder}
+              onRenameFolder={handleRenameFolder}
+              onDeleteFolder={handleDeleteFolder}
+              notes={notes}
+              trashId={trashId}
+              activeView={activeView}
+              onViewChange={setActiveView}
+            />
+          </div>
+        )}
 
-        <NotesList
-          notes={visibleNotes}
-          activeNoteId={activeNoteId}
-          query={query}
-          onQueryChange={setQuery}
-          onNoteSelect={setActiveNoteId}
-          onNewNote={handleNewNote}
-          onToggleDarkMode={handleToggleDarkMode}
-          darkMode={darkMode}
-          isDark={isDark}
-        />
+        {/* Main Content Area */}
+        <div
+          className={`flex-1 ${
+            activeView === "notes" && notesListVisible
+              ? sidebarVisible
+                ? "ml-[560px]"
+                : "ml-80"
+              : sidebarVisible
+              ? "ml-60"
+              : ""
+          }`}
+        >
+          {activeView === "notes" && (
+            <>
+              {notesListVisible && (
+                <div
+                  className={`fixed top-0 h-screen z-10 ${
+                    sidebarVisible ? "left-60" : "left-0"
+                  }`}
+                >
+                  <NotesList
+                    notes={visibleNotes}
+                    activeNoteId={activeNoteId}
+                    query={query}
+                    onQueryChange={setQuery}
+                    onNoteSelect={setActiveNoteId}
+                    onNewNote={handleNewNote}
+                    onToggleDarkMode={handleToggleDarkMode}
+                    darkMode={darkMode}
+                  />
+                </div>
+              )}
 
-        <Editor
-          activeNote={activeNote}
-          draftTitle={draftTitle}
-          draftBody={draftBody}
-          folders={folders}
-          onTitleChange={setDraftTitle}
-          onBodyChange={setDraftBody}
-          onTogglePin={togglePin}
-          onDeleteNote={handleDeleteNote}
-          onRestoreNote={handleRestoreNote}
-          onMoveNote={handleMoveNote}
-        />
+              <Editor
+                activeNote={activeNote}
+                draftTitle={draftTitle}
+                draftBody={draftBody}
+                folders={folders}
+                onTitleChange={setDraftTitle}
+                onBodyChange={setDraftBody}
+                onTogglePin={togglePin}
+                onDeleteNote={handleDeleteNote}
+                onRestoreNote={handleRestoreNote}
+                onMoveNote={handleMoveNote}
+                sidebarVisible={sidebarVisible}
+                notesListVisible={notesListVisible}
+                onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}
+                onToggleNotesList={() => setNotesListVisible(!notesListVisible)}
+                onToggleAllPanels={handleToggleAllPanels}
+              />
+            </>
+          )}
+
+          {activeView === "daily-plan" && (
+            <DailyPlanComponent
+              dailyPlan={
+                dailyPlans.find(
+                  (plan) => plan.date === new Date().toISOString().split("T")[0]
+                ) || null
+              }
+              settings={settings}
+              onUpdatePlan={handleUpdateDailyPlan}
+              onCreatePlan={handleCreateDailyPlan}
+              onGenerateWithGemini={handleGenerateWithGemini}
+              aiError={aiError}
+            />
+          )}
+
+          {activeView === "settings" && (
+            <Settings
+              settings={settings}
+              onUpdateSettings={handleUpdateSettings}
+            />
+          )}
+        </div>
       </div>
+
+      {/* Cookie Banner */}
+      {!cookiesAccepted && (
+        <CookieBanner
+          onAccept={handleAcceptCookies}
+          onDecline={handleDeclineCookies}
+        />
+      )}
     </div>
   );
 }
