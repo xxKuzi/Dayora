@@ -24,7 +24,7 @@ export interface AIGeneratedPlan {
 class AIService {
   private apiKey: string;
   // Use the stable v1 endpoint; keep model configurable
-  private model = "gemini-1.5-pro"; // or a 2.x model your project has access to
+  private model = "gemini-2.0-flash"; // or a 2.x model your project has access to
   private baseUrl = `https://generativelanguage.googleapis.com/v1/models/${this.model}:generateContent`;
 
   constructor(apiKey: string) {

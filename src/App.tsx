@@ -539,7 +539,7 @@ export default function App() {
 
       <div className="w-full h-full flex text-zinc-900 dark:text-zinc-100">
         {sidebarVisible && (
-          <div className="fixed left-0 top-0 h-screen bg-magenta-600 z-10">
+          <div className="fixed left-0 top-0 h-screen bg-gradient-to-b from-[#667eea] via-[#667eea] to-[#764ba2] z-10">
             <Sidebar
               folders={folders}
               activeFolderId={activeFolderId}
@@ -557,7 +557,7 @@ export default function App() {
 
         {/* Main Content Area */}
         <div
-          className={`flex-1 ${
+          className={`flex-1 bg-black/d0 ${
             activeView === "notes" && notesListVisible
               ? sidebarVisible
                 ? "ml-[560px]"

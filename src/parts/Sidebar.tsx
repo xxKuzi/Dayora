@@ -42,7 +42,7 @@ export default function Sidebar({
             className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-all ${
               activeView === view.id
                 ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md"
-                : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800"
             }`}
           >
             {view.label}
