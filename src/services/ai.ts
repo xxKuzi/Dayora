@@ -13,6 +13,7 @@ export interface DailyTask {
   priority: "low" | "medium" | "high";
   estimatedTime?: number;
   category?: string;
+  timeOfDay?: "morning" | "midday" | "evening";
 }
 
 export interface AIGeneratedPlan {
@@ -75,6 +76,7 @@ class AIService {
   }
 
   private buildPrompt(rawTasks: string, userSettings?: any): string {
+    const userType = userSettings?.userType || "worker";
     const workHours = userSettings?.workHours
       ? `Work hours: ${userSettings.workHours.start} - ${userSettings.workHours.end}`
       : "Work hours: 9:00 AM - 5:00 PM (default)";
@@ -87,6 +89,7 @@ class AIService {
 
 User's raw tasks: "${rawTasks}"
 
+User profile: ${userType}
 User preferences:
 - ${workHours}
 - ${mealTimes}
@@ -94,9 +97,15 @@ User preferences:
 Please analyze the tasks and create an organized daily plan. Consider:
 1. Prioritizing tasks by importance and urgency
 2. Grouping related tasks together
-3. Suggesting optimal timing based on work hours and meal times
-4. Adding estimated time for each task
-5. Categorizing tasks (work, personal, health, etc.)
+3. Assigning tasks to appropriate time blocks (morning, midday, evening)
+4. Suggesting optimal timing based on work hours and meal times
+5. Adding estimated time for each task
+6. Categorizing tasks (work, personal, health, etc.)
+
+Time blocks:
+- Morning (6AM-12PM): Start your day, important tasks, breakfast
+- Midday (12PM-6PM): Work/school tasks, meetings, lunch
+- Evening (6PM-12AM): Wind down, personal tasks, dinner
 
 Return your response in the following JSON format:
 {
@@ -106,12 +115,13 @@ Return your response in the following JSON format:
       "text": "Task description with suggested timing",
       "priority": "high|medium|low",
       "estimatedTime": 30,
-      "category": "work|personal|health|errands"
+      "category": "work|personal|health|errands",
+      "timeOfDay": "morning|midday|evening"
     }
   ]
 }
 
-Make sure the response is valid JSON and includes all tasks from the user's input, plus any additional suggestions for a productive day.`;
+Make sure the response is valid JSON and includes all tasks from the user's input, plus any additional suggestions for a productive day. Each task MUST have a timeOfDay assigned.`;
   }
 
   private parseGeneratedPlan(text: string): AIGeneratedPlan {
@@ -130,6 +140,7 @@ Make sure the response is valid JSON and includes all tasks from the user's inpu
           priority: (task.priority as DailyTask["priority"]) || "medium",
           estimatedTime: task.estimatedTime ?? undefined,
           category: task.category ?? undefined,
+          timeOfDay: (task.timeOfDay as DailyTask["timeOfDay"]) || "morning",
         })
       );
 
@@ -147,6 +158,7 @@ Make sure the response is valid JSON and includes all tasks from the user's inpu
         text: line.trim(),
         completed: false,
         priority: "medium",
+        timeOfDay: "morning" as const,
       }));
       return {
         tasks: fallbackTasks,

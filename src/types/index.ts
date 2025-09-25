@@ -15,6 +15,8 @@ export interface Folder {
 
 export type DarkMode = "light" | "dark" | "auto";
 
+export type CookiePreference = "accepted" | "declined";
+
 export interface DailyPlan {
   id: string;
   date: string; // YYYY-MM-DD format
@@ -34,7 +36,6 @@ export interface DailyTask {
 }
 
 export interface UserSettings {
-  userType: "kid" | "student" | "worker" | "retired";
   mealTimes: {
     breakfast: string;
     lunch: string;
@@ -75,5 +76,5 @@ export interface AppState {
   darkMode: DarkMode;
   dailyPlans: DailyPlan[];
   settings: UserSettings;
-  cookiesAccepted: boolean;
+  cookiePreference?: CookiePreference;
 }

@@ -1182,129 +1182,323 @@ export default function DailyPlan({
               <p>No tasks yet. Add some tasks to get started!</p>
             </div>
           ) : (
-            (() => {
-              // Group tasks by time of day
-              const groupedTasks = dailyPlan.tasks.reduce((groups, task) => {
-                const timeOfDay = task.timeOfDay || "morning";
-                if (!groups[timeOfDay]) {
-                  groups[timeOfDay] = [];
-                }
-                groups[timeOfDay].push(task);
-                return groups;
-              }, {} as Record<string, typeof dailyPlan.tasks>);
-
-              // Define time order and labels
-              const timeOrder = ["morning", "midday", "evening"];
-              const timeLabels = {
-                morning: { label: "🌅 Morning", subtitle: "6AM - 12PM" },
-                midday: { label: "☀️ Midday", subtitle: "12PM - 6PM" },
-                evening: { label: "🌙 Evening", subtitle: "6PM - 12AM" },
-              };
-
-              return timeOrder
-                .map((timeOfDay) => {
-                  const tasks = groupedTasks[timeOfDay] || [];
-                  if (tasks.length === 0) return null;
-
-                  const completedCount = tasks.filter(
-                    (task) => task.completed
-                  ).length;
-                  const totalCount = tasks.length;
-                  const progressPercentage =
-                    totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-
-                  return (
-                    <div key={timeOfDay} className="space-y-3">
-                      {/* Time Group Header */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-semibold text-white">
-                            {
-                              timeLabels[timeOfDay as keyof typeof timeLabels]
-                                .label
-                            }
-                          </h3>
-                          <span className="text-sm text-gray-400">
-                            {
-                              timeLabels[timeOfDay as keyof typeof timeLabels]
-                                .subtitle
-                            }
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-400">
-                            {completedCount}/{totalCount} completed
-                          </span>
-                          <div className="w-16 bg-gray-700 rounded-full h-2">
-                            <div
-                              className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${progressPercentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Tasks in this time group */}
-                      <div className="space-y-2">
-                        {tasks.map((task) => (
-                          <div
-                            key={task.id}
-                            className={`p-4 rounded-xl border transition-all duration-200 ${
-                              task.completed
-                                ? "bg-green-900/20 border-green-800"
-                                : "bg-gray-900 border-gray-800 hover:border-gray-700"
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <button
-                                onClick={() => handleToggleTask(task.id)}
-                                className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+            <>
+              {/* Morning Tasks */}
+              {(() => {
+                const morningTasks = dailyPlan.tasks.filter(
+                  (task) => task.timeOfDay === "morning"
+                );
+                return morningTasks.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                        🌅 Morning
+                        <span className="text-sm font-normal text-gray-400">
+                          (6AM - 12PM)
+                        </span>
+                      </h3>
+                      <div className="flex-1 h-px bg-gradient-to-r from-yellow-500/50 to-transparent"></div>
+                      <span className="text-sm text-gray-400">
+                        {morningTasks.filter((t) => t.completed).length}/
+                        {morningTasks.length} completed
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {morningTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className={`p-4 rounded-xl border transition-all duration-200 ${
+                            task.completed
+                              ? "bg-green-900/20 border-green-800"
+                              : "bg-gray-900 border-gray-800 hover:border-gray-700"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <button
+                              onClick={() => handleToggleTask(task.id)}
+                              className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                task.completed
+                                  ? "bg-green-500 border-green-500 text-white"
+                                  : "border-gray-600 hover:border-green-500"
+                              }`}
+                            >
+                              {task.completed && (
+                                <span className="text-xs">✓</span>
+                              )}
+                            </button>
+                            <div className="flex-1">
+                              <p
+                                className={`text-white ${
                                   task.completed
-                                    ? "bg-green-500 border-green-500 text-white"
-                                    : "border-gray-600 hover:border-green-500"
+                                    ? "line-through opacity-60"
+                                    : ""
                                 }`}
                               >
-                                {task.completed && (
-                                  <span className="text-xs">✓</span>
+                                {task.text}
+                              </p>
+                              <div className="flex gap-2 mt-2">
+                                {task.priority !== "medium" && (
+                                  <span
+                                    className={`inline-block px-2 py-1 text-xs rounded-full ${getPriorityColor(
+                                      task.priority
+                                    )}`}
+                                  >
+                                    {task.priority} priority
+                                  </span>
                                 )}
-                              </button>
-                              <div className="flex-1">
-                                <p
-                                  className={`text-white ${
-                                    task.completed
-                                      ? "line-through opacity-60"
-                                      : ""
-                                  }`}
-                                >
-                                  {task.text}
-                                </p>
-                                <div className="flex gap-2 mt-2">
-                                  {task.priority !== "medium" && (
-                                    <span
-                                      className={`inline-block px-2 py-1 text-xs rounded-full ${getPriorityColor(
-                                        task.priority
-                                      )}`}
-                                    >
-                                      {task.priority} priority
-                                    </span>
-                                  )}
-                                </div>
                               </div>
-                              <button
-                                onClick={() => handleDeleteTask(task.id)}
-                                className="text-gray-400 hover:text-red-400 transition-colors"
-                              >
-                                🗑️
-                              </button>
                             </div>
+                            <button
+                              onClick={() => handleDeleteTask(task.id)}
+                              className="text-gray-400 hover:text-red-400 transition-colors"
+                            >
+                              🗑️
+                            </button>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
-                  );
-                })
-                .filter(Boolean);
-            })()
+                  </div>
+                ) : null;
+              })()}
+
+              {/* Midday Tasks */}
+              {(() => {
+                const middayTasks = dailyPlan.tasks.filter(
+                  (task) => task.timeOfDay === "midday"
+                );
+                return middayTasks.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                        ☀️ Midday
+                        <span className="text-sm font-normal text-gray-400">
+                          (12PM - 6PM)
+                        </span>
+                      </h3>
+                      <div className="flex-1 h-px bg-gradient-to-r from-orange-500/50 to-transparent"></div>
+                      <span className="text-sm text-gray-400">
+                        {middayTasks.filter((t) => t.completed).length}/
+                        {middayTasks.length} completed
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {middayTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className={`p-4 rounded-xl border transition-all duration-200 ${
+                            task.completed
+                              ? "bg-green-900/20 border-green-800"
+                              : "bg-gray-900 border-gray-800 hover:border-gray-700"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <button
+                              onClick={() => handleToggleTask(task.id)}
+                              className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                task.completed
+                                  ? "bg-green-500 border-green-500 text-white"
+                                  : "border-gray-600 hover:border-green-500"
+                              }`}
+                            >
+                              {task.completed && (
+                                <span className="text-xs">✓</span>
+                              )}
+                            </button>
+                            <div className="flex-1">
+                              <p
+                                className={`text-white ${
+                                  task.completed
+                                    ? "line-through opacity-60"
+                                    : ""
+                                }`}
+                              >
+                                {task.text}
+                              </p>
+                              <div className="flex gap-2 mt-2">
+                                {task.priority !== "medium" && (
+                                  <span
+                                    className={`inline-block px-2 py-1 text-xs rounded-full ${getPriorityColor(
+                                      task.priority
+                                    )}`}
+                                  >
+                                    {task.priority} priority
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteTask(task.id)}
+                              className="text-gray-400 hover:text-red-400 transition-colors"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+              {/* Evening Tasks */}
+              {(() => {
+                const eveningTasks = dailyPlan.tasks.filter(
+                  (task) => task.timeOfDay === "evening"
+                );
+                return eveningTasks.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                        🌙 Evening
+                        <span className="text-sm font-normal text-gray-400">
+                          (6PM - 12AM)
+                        </span>
+                      </h3>
+                      <div className="flex-1 h-px bg-gradient-to-r from-purple-500/50 to-transparent"></div>
+                      <span className="text-sm text-gray-400">
+                        {eveningTasks.filter((t) => t.completed).length}/
+                        {eveningTasks.length} completed
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {eveningTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className={`p-4 rounded-xl border transition-all duration-200 ${
+                            task.completed
+                              ? "bg-green-900/20 border-green-800"
+                              : "bg-gray-900 border-gray-800 hover:border-gray-700"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <button
+                              onClick={() => handleToggleTask(task.id)}
+                              className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                task.completed
+                                  ? "bg-green-500 border-green-500 text-white"
+                                  : "border-gray-600 hover:border-green-500"
+                              }`}
+                            >
+                              {task.completed && (
+                                <span className="text-xs">✓</span>
+                              )}
+                            </button>
+                            <div className="flex-1">
+                              <p
+                                className={`text-white ${
+                                  task.completed
+                                    ? "line-through opacity-60"
+                                    : ""
+                                }`}
+                              >
+                                {task.text}
+                              </p>
+                              <div className="flex gap-2 mt-2">
+                                {task.priority !== "medium" && (
+                                  <span
+                                    className={`inline-block px-2 py-1 text-xs rounded-full ${getPriorityColor(
+                                      task.priority
+                                    )}`}
+                                  >
+                                    {task.priority} priority
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteTask(task.id)}
+                              className="text-gray-400 hover:text-red-400 transition-colors"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+              {/* Tasks without timeOfDay */}
+              {(() => {
+                const untimedTasks = dailyPlan.tasks.filter(
+                  (task) => !task.timeOfDay
+                );
+                return untimedTasks.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                        📋 Other Tasks
+                        <span className="text-sm font-normal text-gray-400">
+                          (No specific time)
+                        </span>
+                      </h3>
+                      <div className="flex-1 h-px bg-gradient-to-r from-gray-500/50 to-transparent"></div>
+                      <span className="text-sm text-gray-400">
+                        {untimedTasks.filter((t) => t.completed).length}/
+                        {untimedTasks.length} completed
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {untimedTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className={`p-4 rounded-xl border transition-all duration-200 ${
+                            task.completed
+                              ? "bg-green-900/20 border-green-800"
+                              : "bg-gray-900 border-gray-800 hover:border-gray-700"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <button
+                              onClick={() => handleToggleTask(task.id)}
+                              className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                task.completed
+                                  ? "bg-green-500 border-green-500 text-white"
+                                  : "border-gray-600 hover:border-green-500"
+                              }`}
+                            >
+                              {task.completed && (
+                                <span className="text-xs">✓</span>
+                              )}
+                            </button>
+                            <div className="flex-1">
+                              <p
+                                className={`text-white ${
+                                  task.completed
+                                    ? "line-through opacity-60"
+                                    : ""
+                                }`}
+                              >
+                                {task.text}
+                              </p>
+                              <div className="flex gap-2 mt-2">
+                                {task.priority !== "medium" && (
+                                  <span
+                                    className={`inline-block px-2 py-1 text-xs rounded-full ${getPriorityColor(
+                                      task.priority
+                                    )}`}
+                                  >
+                                    {task.priority} priority
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteTask(task.id)}
+                              className="text-gray-400 hover:text-red-400 transition-colors"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+            </>
           )}
         </div>
       </div>

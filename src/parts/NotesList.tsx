@@ -24,7 +24,7 @@ export default function NotesList({
   darkMode,
 }: NotesListProps) {
   return (
-    <section className="w-80 h-screen border-r border-white/20 dark:border-zinc-700/50 p-4 flex flex-col bg-white/5 dark:bg-zinc-900/10 backdrop-blur-sm">
+    <section className="w-80 h-screen border-r border-white/20 dark:border-zinc-700/50 p-4 flex flex-col bg-white/5 dark:bg-zinc-900/30 backdrop-blur-sm">
       <div className="flex items-center gap-2">
         <Input
           value={query}

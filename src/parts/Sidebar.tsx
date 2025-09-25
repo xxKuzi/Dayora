@@ -28,7 +28,7 @@ export default function Sidebar({
   onViewChange,
 }: SidebarProps) {
   return (
-    <aside className="w-60 h-screen border-r border-white/20 dark:border-zinc-700/50 p-4 flex flex-col gap-4 bg-white/10 dark:bg-zinc-900/20 backdrop-blur-md">
+    <aside className="w-60 h-full border-r border-white/20 dark:border-zinc-700/50 p-4 flex flex-col gap-4 bg-white/10 dark:bg-magenta-600 backdrop-blur-md">
       {/* Navigation */}
       <div className="space-y-1">
         {[
@@ -53,6 +53,9 @@ export default function Sidebar({
       {/* Notes-specific content */}
       {activeView === "notes" && (
         <>
+          <br></br>
+          <div className="w-full h-0.5 bg-zinc-200/30 rounded-full" />
+
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold tracking-wide uppercase opacity-70">
               Folders
@@ -100,7 +103,7 @@ export default function Sidebar({
       {activeView === "daily-plan" && (
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="text-4xl mb-2">📅</div>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm text-zinc-200 dark:text-zinc-200">
             Plan your day with AI assistance
           </p>
         </div>
@@ -110,7 +113,7 @@ export default function Sidebar({
       {activeView === "settings" && (
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="text-4xl mb-2">⚙️</div>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm text-zinc-600 dark:text-zinc-200">
             Customize your experience
           </p>
         </div>

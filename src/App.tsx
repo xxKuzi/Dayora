@@ -7,6 +7,7 @@ import type {
   DarkMode,
   DailyPlan,
   UserSettings,
+  CookiePreference,
 } from "./types";
 import { Button } from "./components";
 import { nid, fid, deriveTitleFromBody, load, save } from "./utils";
@@ -81,7 +82,6 @@ export default function App() {
   );
   const [settings, setSettings] = useState<UserSettings>(
     initial?.settings ?? {
-      userType: "worker",
       mealTimes: {
         breakfast: "08:00",
         lunch: "12:30",
@@ -95,14 +95,30 @@ export default function App() {
       goals: [],
     }
   );
-  const [cookiesAccepted, setCookiesAccepted] = useState<boolean>(
-    initial?.cookiesAccepted ?? false
+  const [cookiePreference, setCookiePreference] = useState<
+    CookiePreference | undefined
+  >(
+    (() => {
+      // Handle migration from old cookiesAccepted boolean
+      if (initial?.cookiePreference) return initial.cookiePreference;
+      if (
+        initial &&
+        "cookiesAccepted" in initial &&
+        typeof initial.cookiesAccepted === "boolean"
+      ) {
+        return initial.cookiesAccepted ? "accepted" : "declined";
+      }
+      return undefined;
+    })()
   );
   const [aiError, setAiError] = useState<string | null>(null);
 
   // Calculate if we should show dark mode
   const isDark =
     darkMode === "dark" || (darkMode === "auto" && systemPrefersDark);
+
+  // Helper to check if data should be persisted
+  const shouldPersistData = cookiePreference === "accepted";
 
   // Initialize AI service on component mount
   useEffect(() => {
@@ -211,6 +227,8 @@ export default function App() {
   // Debounce localStorage writes (300ms) to avoid blocking main thread
   const persistTimer = useRef<number | null>(null);
   useEffect(() => {
+    if (!shouldPersistData) return; // Don't save if cookies not accepted
+
     if (persistTimer.current) window.clearTimeout(persistTimer.current);
     persistTimer.current = window.setTimeout(() => {
       save({
@@ -222,7 +240,7 @@ export default function App() {
         darkMode,
         dailyPlans,
         settings,
-        cookiesAccepted,
+        cookiePreference,
       });
     }, 300);
     return () => {
@@ -237,7 +255,8 @@ export default function App() {
     darkMode,
     dailyPlans,
     settings,
-    cookiesAccepted,
+    cookiePreference,
+    shouldPersistData,
   ]);
 
   // ---- Derived lists ----
@@ -454,11 +473,13 @@ export default function App() {
 
   // Cookie handlers
   function handleAcceptCookies() {
-    setCookiesAccepted(true);
+    setCookiePreference("accepted");
   }
 
   function handleDeclineCookies() {
-    setCookiesAccepted(false);
+    setCookiePreference("declined");
+    // Clear existing data from localStorage when declining
+    localStorage.removeItem("dayora_v1");
   }
 
   return (
@@ -518,7 +539,7 @@ export default function App() {
 
       <div className="w-full h-full flex text-zinc-900 dark:text-zinc-100">
         {sidebarVisible && (
-          <div className="fixed left-0 top-0 h-screen z-10">
+          <div className="fixed left-0 top-0 h-screen bg-magenta-600 z-10">
             <Sidebar
               folders={folders}
               activeFolderId={activeFolderId}
@@ -609,7 +630,7 @@ export default function App() {
       </div>
 
       {/* Cookie Banner */}
-      {!cookiesAccepted && (
+      {cookiePreference === undefined && (
         <CookieBanner
           onAccept={handleAcceptCookies}
           onDecline={handleDeclineCookies}
