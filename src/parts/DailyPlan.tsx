@@ -22,6 +22,7 @@ export default function DailyPlan({
   const [isGenerating, setIsGenerating] = useState(false);
   const [showManualTable, setShowManualTable] = useState(false);
   const [useTableMode, setUseTableMode] = useState(false);
+  const [useAIMode, setUseAIMode] = useState(true);
   const [tableTasks, setTableTasks] = useState<Partial<DailyTask>[]>([
     { text: "", priority: "medium", timeOfDay: "morning" },
     { text: "", priority: "medium", timeOfDay: "midday" },
@@ -61,8 +62,8 @@ export default function DailyPlan({
   };
 
   const handleGeneratePlan = async () => {
-    if (useTableMode) {
-      // Handle table mode - save tasks directly
+    if (!useAIMode) {
+      // Manual mode - save tasks directly (always table mode in manual)
       const validTasks = tableTasks.filter((task) => task.text?.trim());
       if (validTasks.length === 0) return;
 
@@ -101,17 +102,59 @@ export default function DailyPlan({
         { text: "", priority: "medium", timeOfDay: "morning" },
       ]);
     } else {
-      // Handle text mode - use AI generation
-      if (!rawTasks.trim()) return;
+      // AI mode
+      if (useTableMode) {
+        // AI Table mode - save tasks directly (no AI processing)
+        const validTasks = tableTasks.filter((task) => task.text?.trim());
+        if (validTasks.length === 0) return;
 
-      setIsGenerating(true);
-      try {
-        await onGenerateWithGemini(rawTasks);
-        setRawTasks("");
-      } catch (error) {
-        console.error("Failed to generate plan:", error);
-      } finally {
-        setIsGenerating(false);
+        const newTasks: DailyTask[] = validTasks.map((task) => ({
+          id: `task_${Math.random().toString(36).slice(2, 9)}`,
+          text: task.text!.trim(),
+          completed: false,
+          priority: task.priority || "medium",
+          timeOfDay: task.timeOfDay || "morning",
+        }));
+
+        if (!dailyPlan) {
+          const newPlan: DailyPlan = {
+            id: `plan_${Math.random().toString(36).slice(2, 9)}`,
+            date: today,
+            tasks: newTasks,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
+          onCreatePlan(today);
+          onUpdatePlan(newPlan);
+        } else {
+          const updatedPlan = {
+            ...dailyPlan,
+            tasks: [...dailyPlan.tasks, ...newTasks],
+            updatedAt: Date.now(),
+          };
+          onUpdatePlan(updatedPlan);
+        }
+
+        // Reset table
+        setTableTasks([
+          { text: "", priority: "medium", timeOfDay: "morning" },
+          { text: "", priority: "medium", timeOfDay: "midday" },
+          { text: "", priority: "medium", timeOfDay: "evening" },
+          { text: "", priority: "medium", timeOfDay: "morning" },
+        ]);
+      } else {
+        // AI Text mode - use AI generation
+        if (!rawTasks.trim()) return;
+
+        setIsGenerating(true);
+        try {
+          await onGenerateWithGemini(rawTasks);
+          setRawTasks("");
+        } catch (error) {
+          console.error("Failed to generate plan:", error);
+        } finally {
+          setIsGenerating(false);
+        }
       }
     }
   };
@@ -243,34 +286,170 @@ export default function DailyPlan({
           <div className="mb-8">
             <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold text-white">
-                  ✨ AI Plan Generator
-                </h3>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-4">
+                  <h3 className="text-xl font-semibold text-white">
+                    {useAIMode
+                      ? "✨ AI Plan Generator"
+                      : "📋 Manual Plan Creator"}
+                  </h3>
+                  {useAIMode && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setUseTableMode(false)}
+                        className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                          !useTableMode
+                            ? "bg-purple-600 text-white"
+                            : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                        }`}
+                      >
+                        📝 Text
+                      </button>
+                      <button
+                        onClick={() => setUseTableMode(true)}
+                        className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                          useTableMode
+                            ? "bg-purple-600 text-white"
+                            : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                        }`}
+                      >
+                        📋 Table
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 bg-gray-800 rounded-lg p-1">
                   <button
-                    onClick={() => setUseTableMode(false)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      !useTableMode
-                        ? "bg-purple-600 text-white"
-                        : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                    onClick={() => setUseAIMode(true)}
+                    className={`px-3 py-1 rounded text-sm font-medium transition-all duration-200 ${
+                      useAIMode
+                        ? "bg-purple-600 text-white shadow-sm"
+                        : "text-gray-400 hover:text-white"
                     }`}
                   >
-                    📝 Text
+                    🤖 AI
                   </button>
                   <button
-                    onClick={() => setUseTableMode(true)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      useTableMode
-                        ? "bg-purple-600 text-white"
-                        : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                    onClick={() => setUseAIMode(false)}
+                    className={`px-3 py-1 rounded text-sm font-medium transition-all duration-200 ${
+                      !useAIMode
+                        ? "bg-purple-600 text-white shadow-sm"
+                        : "text-gray-400 hover:text-white"
                     }`}
                   >
-                    📋 Table
+                    ✋ Manual
                   </button>
                 </div>
               </div>
 
-              {!useTableMode ? (
+              {!useAIMode ? (
+                // Manual mode - always show table
+                <>
+                  <p className="text-gray-400 mb-4">
+                    Fill in your tasks with priority and time preferences. Use
+                    the quick buttons (1-3) for time selection:
+                    <br />
+                    <span className="text-yellow-400">
+                      1 - Morning (6AM-12PM)
+                    </span>{" "}
+                    •
+                    <span className="text-orange-400">
+                      {" "}
+                      2 - Midday (12PM-6PM)
+                    </span>{" "}
+                    •
+                    <span className="text-purple-400">
+                      {" "}
+                      3 - Evening (6PM-12AM)
+                    </span>
+                  </p>
+
+                  <div className="space-y-3">
+                    {tableTasks.map((task, index) => (
+                      <div key={index} className="flex gap-3 items-center">
+                        <Input
+                          value={task.text || ""}
+                          onChange={(e) =>
+                            handleTableTaskChange(index, "text", e.target.value)
+                          }
+                          placeholder="Task name..."
+                          className="flex-1 bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+                        />
+                        <select
+                          value={task.priority || "medium"}
+                          onChange={(e) =>
+                            handleTableTaskChange(
+                              index,
+                              "priority",
+                              e.target.value
+                            )
+                          }
+                          className="px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white"
+                        >
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                        </select>
+                        <div className="flex gap-1">
+                          {[
+                            {
+                              key: "morning",
+                              label: "1",
+                              title:
+                                "Morning (6AM-12PM): Start your day, important tasks",
+                            },
+                            {
+                              key: "midday",
+                              label: "2",
+                              title:
+                                "Midday (12PM-6PM): Meetings, focused work",
+                            },
+                            {
+                              key: "evening",
+                              label: "3",
+                              title:
+                                "Evening (6PM-12AM): Wind down, personal tasks",
+                            },
+                          ].map((time) => (
+                            <button
+                              key={time.key}
+                              onClick={() =>
+                                handleTableTaskChange(
+                                  index,
+                                  "timeOfDay",
+                                  time.key
+                                )
+                              }
+                              title={time.title}
+                              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                                task.timeOfDay === time.key
+                                  ? getTimeOfDayColor(time.key)
+                                  : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                              }`}
+                            >
+                              {time.label}
+                            </button>
+                          ))}
+                        </div>
+                        {tableTasks.length > 1 && (
+                          <button
+                            onClick={() => handleRemoveTableTask(index)}
+                            className="text-red-400 hover:text-red-300"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      onClick={handleAddTableTask}
+                      className="!bg-gray-700 hover:!bg-gray-600 !text-white !border-gray-600 hover:!scale-100"
+                    >
+                      + Add Task
+                    </Button>
+                  </div>
+                </>
+              ) : !useTableMode ? (
+                // AI Text mode
                 <>
                   <p className="text-gray-400 mb-4">
                     Describe what you need to do today. Press{" "}
@@ -297,6 +476,7 @@ export default function DailyPlan({
                   />
                 </>
               ) : (
+                // AI Table mode
                 <>
                   <p className="text-gray-400 mb-4">
                     Fill in your tasks with priority and time preferences. Use
@@ -408,7 +588,9 @@ export default function DailyPlan({
                 <Button
                   onClick={handleGeneratePlan}
                   disabled={
-                    useTableMode
+                    !useAIMode
+                      ? !tableTasks.some((task) => task.text?.trim())
+                      : useTableMode
                       ? !tableTasks.some((task) => task.text?.trim())
                       : !rawTasks.trim() || isGenerating
                   }
@@ -416,15 +598,11 @@ export default function DailyPlan({
                 >
                   {isGenerating
                     ? "Generating..."
+                    : !useAIMode
+                    ? "✨ Add Tasks to Plan"
                     : useTableMode
                     ? "✨ Add Tasks to Plan"
                     : "✨ Generate Smart Plan"}
-                </Button>
-                <Button
-                  onClick={() => setShowManualTable(!showManualTable)}
-                  className="!bg-gray-700 hover:!bg-gray-600 !text-white !border-gray-600 hover:!scale-100"
-                >
-                  📝 Manual Entry
                 </Button>
               </div>
             </div>
@@ -588,40 +766,176 @@ export default function DailyPlan({
           </div>
         </div>
 
-        {/* AI Plan Generation */}
+        {/* AI or MANUAL Generation */}
         <div className="mb-8">
           <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-white">
-                ✨ AI Plan Generator
-              </h3>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-4">
+                <h3 className="text-xl font-semibold text-white">
+                  {useAIMode
+                    ? "✨ AI Plan Generator"
+                    : "📋 Manual Plan Creator"}
+                </h3>
+                {useAIMode && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setUseTableMode(false)}
+                      className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                        !useTableMode
+                          ? "bg-purple-600 text-white"
+                          : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                      }`}
+                    >
+                      📝 Text
+                    </button>
+                    <button
+                      onClick={() => setUseTableMode(true)}
+                      className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                        useTableMode
+                          ? "bg-purple-600 text-white"
+                          : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                      }`}
+                    >
+                      📋 Table
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2 bg-gray-800 rounded-lg p-1">
                 <button
-                  onClick={() => setUseTableMode(false)}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    !useTableMode
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                  onClick={() => setUseAIMode(true)}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-all duration-200 ${
+                    useAIMode
+                      ? "bg-purple-600 text-white shadow-sm"
+                      : "text-gray-400 hover:text-white"
                   }`}
                 >
-                  📝 Text
+                  🤖 AI
                 </button>
                 <button
-                  onClick={() => setUseTableMode(true)}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                    useTableMode
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                  onClick={() => setUseAIMode(false)}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-all duration-200 ${
+                    !useAIMode
+                      ? "bg-purple-600 text-white shadow-sm"
+                      : "text-gray-400 hover:text-white"
                   }`}
                 >
-                  📋 Table
+                  ✋ Manual
                 </button>
               </div>
             </div>
 
-            {!useTableMode ? (
+            {!useAIMode ? (
+              // Manual mode - always show table
               <>
-                <p className="text-gray-400 mb-4">
+                <p className="text-gray-400 mb-10">
+                  Add more tasks to your plan. Fill in your tasks with priority
+                  and time preferences. Use the quick buttons (1-3) for time
+                  selection:
+                  <br />
+                  <span className="text-yellow-400">
+                    1 - Morning (6AM-12PM)
+                  </span>{" "}
+                  •
+                  <span className="text-orange-400">
+                    {" "}
+                    2 - Midday (12PM-6PM)
+                  </span>{" "}
+                  •
+                  <span className="text-purple-400">
+                    {" "}
+                    3 - Evening (6PM-12AM)
+                  </span>
+                </p>
+
+                <div className="space-y-3">
+                  {tableTasks.map((task, index) => (
+                    <div key={index} className="flex gap-3 items-center">
+                      <Input
+                        value={task.text || ""}
+                        onChange={(e) =>
+                          handleTableTaskChange(index, "text", e.target.value)
+                        }
+                        placeholder="Task name..."
+                        className="flex-1 bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+                      />
+                      <select
+                        value={task.priority || "medium"}
+                        onChange={(e) =>
+                          handleTableTaskChange(
+                            index,
+                            "priority",
+                            e.target.value
+                          )
+                        }
+                        className="px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white"
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </select>
+                      <div className="flex gap-1">
+                        {[
+                          {
+                            key: "morning",
+                            label: "1",
+                            title:
+                              "Morning (6AM-12PM): Start your day, important tasks",
+                          },
+                          {
+                            key: "midday",
+                            label: "2",
+                            title: "Midday (12PM-6PM): Meetings, focused work",
+                          },
+                          {
+                            key: "evening",
+                            label: "3",
+                            title:
+                              "Evening (6PM-12AM): Wind down, personal tasks",
+                          },
+                        ].map((time) => (
+                          <button
+                            key={time.key}
+                            onClick={() =>
+                              handleTableTaskChange(
+                                index,
+                                "timeOfDay",
+                                time.key
+                              )
+                            }
+                            title={time.title}
+                            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                              task.timeOfDay === time.key
+                                ? getTimeOfDayColor(time.key)
+                                : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                            }`}
+                          >
+                            {time.label}
+                          </button>
+                        ))}
+                      </div>
+                      {tableTasks.length > 1 && (
+                        <button
+                          onClick={() => handleRemoveTableTask(index)}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <Button
+                    onClick={handleAddTableTask}
+                    className="!bg-gray-700 hover:!bg-gray-600 !text-white !border-gray-600 hover:!scale-100"
+                  >
+                    + Add Task
+                  </Button>
+                </div>
+              </>
+            ) : !useTableMode ? (
+              // AI Text mode
+              <>
+                <p className="text-gray-400 mb-10">
                   Add more tasks to your plan. Press{" "}
                   <kbd className="px-2 py-1 bg-gray-800 rounded text-sm">
                     Cmd+Enter
@@ -646,8 +960,9 @@ export default function DailyPlan({
                 />
               </>
             ) : (
+              // AI Table mode
               <>
-                <p className="text-gray-400 mb-4">
+                <p className="text-gray-400 mb-10">
                   Fill in your tasks with priority and time preferences. Use the
                   quick buttons (1-3) for time selection:
                   <br />
@@ -756,7 +1071,9 @@ export default function DailyPlan({
               <Button
                 onClick={handleGeneratePlan}
                 disabled={
-                  useTableMode
+                  !useAIMode
+                    ? !tableTasks.some((task) => task.text?.trim())
+                    : useTableMode
                     ? !tableTasks.some((task) => task.text?.trim())
                     : !rawTasks.trim() || isGenerating
                 }
@@ -764,15 +1081,11 @@ export default function DailyPlan({
               >
                 {isGenerating
                   ? "Generating..."
+                  : !useAIMode
+                  ? "✨ Add Tasks to Plan"
                   : useTableMode
                   ? "✨ Add Tasks to Plan"
                   : "✨ Generate Smart Plan"}
-              </Button>
-              <Button
-                onClick={() => setShowManualTable(!showManualTable)}
-                className="!bg-gray-700 hover:!bg-gray-600 !text-white !border-gray-600 hover:!scale-100"
-              >
-                📝 Manual Entry
               </Button>
             </div>
           </div>
@@ -861,72 +1174,137 @@ export default function DailyPlan({
           </div>
         )}
 
-        {/* Tasks List */}
-        <div className="space-y-3">
+        {/* Tasks List - Grouped by Time */}
+        <div className="space-y-6">
           {dailyPlan.tasks.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <div className="text-4xl mb-2">📝</div>
               <p>No tasks yet. Add some tasks to get started!</p>
             </div>
           ) : (
-            dailyPlan.tasks.map((task) => (
-              <div
-                key={task.id}
-                className={`p-4 rounded-xl border transition-all duration-200 ${
-                  task.completed
-                    ? "bg-green-900/20 border-green-800"
-                    : "bg-gray-900 border-gray-800 hover:border-gray-700"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <button
-                    onClick={() => handleToggleTask(task.id)}
-                    className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                      task.completed
-                        ? "bg-green-500 border-green-500 text-white"
-                        : "border-gray-600 hover:border-green-500"
-                    }`}
-                  >
-                    {task.completed && <span className="text-xs">✓</span>}
-                  </button>
-                  <div className="flex-1">
-                    <p
-                      className={`text-white ${
-                        task.completed ? "line-through opacity-60" : ""
-                      }`}
-                    >
-                      {task.text}
-                    </p>
-                    <div className="flex gap-2 mt-2">
-                      {task.priority !== "medium" && (
-                        <span
-                          className={`inline-block px-2 py-1 text-xs rounded-full ${getPriorityColor(
-                            task.priority
-                          )}`}
-                        >
-                          {task.priority} priority
-                        </span>
-                      )}
-                      {task.timeOfDay && (
-                        <span
-                          className={`inline-block px-2 py-1 text-xs rounded-full ${getTimeOfDayColor(
-                            task.timeOfDay
-                          )}`}
-                        >
-                          {task.timeOfDay}
-                        </span>
-                      )}
+            (() => {
+              // Group tasks by time of day
+              const groupedTasks = dailyPlan.tasks.reduce((groups, task) => {
+                const timeOfDay = task.timeOfDay || "morning";
+                if (!groups[timeOfDay]) {
+                  groups[timeOfDay] = [];
+                }
+                groups[timeOfDay].push(task);
+                return groups;
+              }, {} as Record<string, typeof dailyPlan.tasks>);
+
+              // Define time order and labels
+              const timeOrder = ["morning", "midday", "evening"];
+              const timeLabels = {
+                morning: { label: "🌅 Morning", subtitle: "6AM - 12PM" },
+                midday: { label: "☀️ Midday", subtitle: "12PM - 6PM" },
+                evening: { label: "🌙 Evening", subtitle: "6PM - 12AM" },
+              };
+
+              return timeOrder
+                .map((timeOfDay) => {
+                  const tasks = groupedTasks[timeOfDay] || [];
+                  if (tasks.length === 0) return null;
+
+                  const completedCount = tasks.filter(
+                    (task) => task.completed
+                  ).length;
+                  const totalCount = tasks.length;
+                  const progressPercentage =
+                    totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+                  return (
+                    <div key={timeOfDay} className="space-y-3">
+                      {/* Time Group Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-lg font-semibold text-white">
+                            {
+                              timeLabels[timeOfDay as keyof typeof timeLabels]
+                                .label
+                            }
+                          </h3>
+                          <span className="text-sm text-gray-400">
+                            {
+                              timeLabels[timeOfDay as keyof typeof timeLabels]
+                                .subtitle
+                            }
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-400">
+                            {completedCount}/{totalCount} completed
+                          </span>
+                          <div className="w-16 bg-gray-700 rounded-full h-2">
+                            <div
+                              className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${progressPercentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Tasks in this time group */}
+                      <div className="space-y-2">
+                        {tasks.map((task) => (
+                          <div
+                            key={task.id}
+                            className={`p-4 rounded-xl border transition-all duration-200 ${
+                              task.completed
+                                ? "bg-green-900/20 border-green-800"
+                                : "bg-gray-900 border-gray-800 hover:border-gray-700"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <button
+                                onClick={() => handleToggleTask(task.id)}
+                                className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                  task.completed
+                                    ? "bg-green-500 border-green-500 text-white"
+                                    : "border-gray-600 hover:border-green-500"
+                                }`}
+                              >
+                                {task.completed && (
+                                  <span className="text-xs">✓</span>
+                                )}
+                              </button>
+                              <div className="flex-1">
+                                <p
+                                  className={`text-white ${
+                                    task.completed
+                                      ? "line-through opacity-60"
+                                      : ""
+                                  }`}
+                                >
+                                  {task.text}
+                                </p>
+                                <div className="flex gap-2 mt-2">
+                                  {task.priority !== "medium" && (
+                                    <span
+                                      className={`inline-block px-2 py-1 text-xs rounded-full ${getPriorityColor(
+                                        task.priority
+                                      )}`}
+                                    >
+                                      {task.priority} priority
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteTask(task.id)}
+                                className="text-gray-400 hover:text-red-400 transition-colors"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteTask(task.id)}
-                    className="text-gray-400 hover:text-red-400 transition-colors"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            ))
+                  );
+                })
+                .filter(Boolean);
+            })()
           )}
         </div>
       </div>

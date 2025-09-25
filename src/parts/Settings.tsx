@@ -11,9 +11,9 @@ export default function Settings({
   settings,
   onUpdateSettings,
 }: SettingsProps) {
-  const [activeTab, setActiveTab] = useState<"schedule" | "habits" | "goals">(
-    "schedule"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "profile" | "schedule" | "habits" | "goals"
+  >("profile");
   const [newHabit, setNewHabit] = useState({
     name: "",
     description: "",
@@ -25,6 +25,13 @@ export default function Settings({
     targetDate: "",
     progress: 0,
   });
+
+  const handleUserTypeChange = (userType: UserSettings["userType"]) => {
+    onUpdateSettings({
+      ...settings,
+      userType,
+    });
+  };
 
   const handleMealTimeChange = (
     meal: keyof UserSettings["mealTimes"],
@@ -128,6 +135,7 @@ export default function Settings({
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-8">
           {[
+            { id: "profile", label: "👤 Profile", icon: "👤" },
             { id: "schedule", label: "📅 Schedule", icon: "⏰" },
             { id: "habits", label: "🔄 Habits", icon: "🎯" },
             { id: "goals", label: "🏆 Goals", icon: "⭐" },
@@ -145,6 +153,85 @@ export default function Settings({
             </button>
           ))}
         </div>
+
+        {/* Profile Tab */}
+        {activeTab === "profile" && (
+          <div className="space-y-6">
+            <div className="p-6 bg-gray-800 rounded-xl border border-gray-700">
+              <h3 className="text-xl font-semibold text-white mb-4">
+                👤 User Profile
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    What describes you best?
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      {
+                        value: "kid",
+                        label: "🧒 Kid",
+                        description: "Under 13",
+                      },
+                      {
+                        value: "student",
+                        label: "🎓 Student",
+                        description: "Learning & studying",
+                      },
+                      {
+                        value: "worker",
+                        label: "💼 Worker",
+                        description: "Professional life",
+                      },
+                      {
+                        value: "retired",
+                        label: "🏖️ Retired",
+                        description: "Enjoying life",
+                      },
+                    ].map((type) => (
+                      <button
+                        key={type.value}
+                        onClick={() =>
+                          handleUserTypeChange(
+                            type.value as UserSettings["userType"]
+                          )
+                        }
+                        className={`p-4 rounded-lg border-2 transition-all text-left ${
+                          settings.userType === type.value
+                            ? "border-purple-500 bg-purple-500/10"
+                            : "border-gray-600 hover:border-gray-500 bg-gray-700/50"
+                        }`}
+                      >
+                        <div className="text-lg font-semibold text-white mb-1">
+                          {type.label}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {type.description}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-6 p-4 bg-gray-700/50 rounded-lg">
+                  <p className="text-sm text-gray-300">
+                    <span className="font-medium text-white">Selected:</span>{" "}
+                    {settings.userType === "kid"
+                      ? "🧒 Kid"
+                      : settings.userType === "student"
+                      ? "🎓 Student"
+                      : settings.userType === "worker"
+                      ? "💼 Worker"
+                      : "🏖️ Retired"}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    This helps personalize your daily planning experience and
+                    task suggestions.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Schedule Tab */}
         {activeTab === "schedule" && (
@@ -193,37 +280,43 @@ export default function Settings({
               </div>
             </div>
 
-            <div className="p-6 bg-gray-800 rounded-xl border border-gray-700">
-              <h3 className="text-xl font-semibold text-white mb-4">
-                💼 Work Hours
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    Start Time
-                  </label>
-                  <Input
-                    type="time"
-                    value={settings.workHours.start}
-                    onChange={(e) =>
-                      handleWorkHoursChange("start", e.target.value)
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    End Time
-                  </label>
-                  <Input
-                    type="time"
-                    value={settings.workHours.end}
-                    onChange={(e) =>
-                      handleWorkHoursChange("end", e.target.value)
-                    }
-                  />
+            {(settings.userType === "student" ||
+              settings.userType === "worker") && (
+              <div className="p-6 bg-gray-800 rounded-xl border border-gray-700">
+                <h3 className="text-xl font-semibold text-white mb-4">
+                  {settings.userType === "student" && "🎓 School Hours"}
+                  {settings.userType === "worker" && "💼 Work Hours"}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      {settings.userType === "student" && "School Start"}
+                      {settings.userType === "worker" && "Work Start"}
+                    </label>
+                    <Input
+                      type="time"
+                      value={settings.workHours.start}
+                      onChange={(e) =>
+                        handleWorkHoursChange("start", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      {settings.userType === "student" && "School End"}
+                      {settings.userType === "worker" && "Work End"}
+                    </label>
+                    <Input
+                      type="time"
+                      value={settings.workHours.end}
+                      onChange={(e) =>
+                        handleWorkHoursChange("end", e.target.value)
+                      }
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 

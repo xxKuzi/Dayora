@@ -1,9 +1,7 @@
 export interface GeminiResponse {
   candidates: Array<{
     content: {
-      parts: Array<{
-        text: string;
-      }>;
+      parts: Array<{ text?: string }>;
     };
   }>;
 }
@@ -24,8 +22,9 @@ export interface AIGeneratedPlan {
 
 class AIService {
   private apiKey: string;
-  private baseUrl =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+  // Use the stable v1 endpoint; keep model configurable
+  private model = "gemini-1.5-pro"; // or a 2.x model your project has access to
+  private baseUrl = `https://generativelanguage.googleapis.com/v1/models/${this.model}:generateContent`;
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -41,18 +40,10 @@ class AIService {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-goog-api-key": this.apiKey,
+        "X-goog-api-key": this.apiKey, // per docs
       },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt,
-              },
-            ],
-          },
-        ],
+        contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.7,
           topK: 40,
@@ -62,23 +53,25 @@ class AIService {
       }),
     });
 
+    // Better error reporting
+    let data: any;
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        `Gemini API error: ${response.status} - ${
-          errorData.error?.message || response.statusText
-        }`
-      );
+      data = await response.json().catch(() => ({}));
+      const msg = data?.error?.message || response.statusText;
+      throw new Error(`Gemini API error: ${response.status} – ${msg}`);
     }
 
-    const data: GeminiResponse = await response.json();
+    data = (await response.json()) as GeminiResponse;
 
-    if (!data.candidates || data.candidates.length === 0) {
-      throw new Error("No response from Gemini API");
+    const firstText = data.candidates?.[0]?.content?.parts?.find(
+      (p: any) => typeof p.text === "string"
+    )?.text;
+
+    if (!firstText) {
+      throw new Error("No text candidates returned from Gemini API");
     }
 
-    const generatedText = data.candidates[0].content.parts[0].text;
-    return this.parseGeneratedPlan(generatedText);
+    return this.parseGeneratedPlan(firstText);
   }
 
   private buildPrompt(rawTasks: string, userSettings?: any): string {
@@ -123,45 +116,38 @@ Make sure the response is valid JSON and includes all tasks from the user's inpu
 
   private parseGeneratedPlan(text: string): AIGeneratedPlan {
     try {
-      // Extract JSON from the response (it might be wrapped in markdown code blocks)
       const jsonMatch =
         text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/) ||
         text.match(/\{[\s\S]*\}/);
       const jsonString = jsonMatch ? jsonMatch[1] || jsonMatch[0] : text;
-
       const parsed = JSON.parse(jsonString);
 
-      // Transform the parsed data into our DailyTask format
-      const tasks: DailyTask[] = parsed.tasks.map(
+      const tasks: DailyTask[] = (parsed.tasks ?? []).map(
         (task: any, index: number) => ({
           id: `ai_task_${Date.now()}_${index}`,
           text: task.text || task.description || "Untitled task",
           completed: false,
-          priority: task.priority || "medium",
-          estimatedTime: task.estimatedTime || undefined,
-          category: task.category || undefined,
+          priority: (task.priority as DailyTask["priority"]) || "medium",
+          estimatedTime: task.estimatedTime ?? undefined,
+          category: task.category ?? undefined,
         })
       );
 
-      return {
-        tasks,
-        summary: parsed.summary || "AI-generated daily plan",
-      };
-    } catch (error) {
-      console.error("Failed to parse AI response:", error);
-      console.error("Raw response:", text);
-
-      // Fallback: create basic tasks from the raw input
-      const lines = text.split("\n").filter((line) => line.trim());
-      const fallbackTasks: DailyTask[] = lines
-        .slice(0, 10)
-        .map((line, index) => ({
-          id: `ai_fallback_${Date.now()}_${index}`,
-          text: line.trim(),
-          completed: false,
-          priority: "medium" as const,
-        }));
-
+      return { tasks, summary: parsed.summary || "AI-generated daily plan" };
+    } catch (err) {
+      console.error(
+        "Failed to parse AI response:",
+        err,
+        "\nRaw response:",
+        text
+      );
+      const lines = text.split("\n").filter((l) => l.trim());
+      const fallbackTasks: DailyTask[] = lines.slice(0, 10).map((line, i) => ({
+        id: `ai_fallback_${Date.now()}_${i}`,
+        text: line.trim(),
+        completed: false,
+        priority: "medium",
+      }));
       return {
         tasks: fallbackTasks,
         summary: "AI-generated daily plan (parsed with fallback)",
@@ -170,18 +156,13 @@ Make sure the response is valid JSON and includes all tasks from the user's inpu
   }
 }
 
-// Create a singleton instance
 let aiService: AIService | null = null;
-
 export function initializeAI(apiKey: string): void {
   aiService = new AIService(apiKey);
 }
-
 export function getAIService(): AIService {
-  if (!aiService) {
+  if (!aiService)
     throw new Error("AI service not initialized. Call initializeAI() first.");
-  }
   return aiService;
 }
-
 export { AIService };
