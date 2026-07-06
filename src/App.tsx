@@ -82,6 +82,7 @@ export default function App() {
   );
   const [settings, setSettings] = useState<UserSettings>(
     initial?.settings ?? {
+      userType: "worker",
       mealTimes: {
         breakfast: "08:00",
         lunch: "12:30",

@@ -1,5 +1,5 @@
 import type { Note, Folder } from "../types";
-import { Input, Textarea, MenuButton, Button } from "../components";
+import { Input, Textarea, MenuButton } from "../components";
 
 interface EditorProps {
   activeNote: Note | null;

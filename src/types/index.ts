@@ -36,6 +36,7 @@ export interface DailyTask {
 }
 
 export interface UserSettings {
+  userType?: "kid" | "student" | "worker" | "retired";
   mealTimes: {
     breakfast: string;
     lunch: string;
