@@ -21,11 +21,16 @@ export interface AIGeneratedPlan {
   summary: string;
 }
 
+function getEnvApiKey(): string | undefined {
+  if (typeof import.meta !== "undefined" && import.meta?.env?.VITE_GEMINI_API_KEY) {
+    return import.meta.env.VITE_GEMINI_API_KEY;
+  }
+  return undefined;
+}
+
 class AIService {
   private apiKey: string;
-  // Use the stable v1 endpoint; keep model configurable
-  private model = "gemini-2.0-flash"; // or a 2.x model your project has access to
-  private baseUrl = `https://generativelanguage.googleapis.com/v1/models/${this.model}:generateContent`;
+  private model = "gemini-3.1-flash-lite";
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -37,42 +42,62 @@ class AIService {
   ): Promise<AIGeneratedPlan> {
     const prompt = this.buildPrompt(rawTasks, userSettings);
 
-    const response = await fetch(this.baseUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-goog-api-key": this.apiKey, // per docs
-      },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 2048,
-        },
-      }),
-    });
+    const modelsToTry = [
+      this.model,
+    "gemini-3.1-flash-lite"
+    ];
+    const uniqueModels = Array.from(new Set(modelsToTry));
 
-    // Better error reporting
-    let data: any;
-    if (!response.ok) {
-      data = await response.json().catch(() => ({}));
-      const msg = data?.error?.message || response.statusText;
-      throw new Error(`Gemini API error: ${response.status} – ${msg}`);
+    let lastError: Error | null = null;
+    for (const rawModelName of uniqueModels) {
+      const modelName = rawModelName.trim().replace(/['"]/g, "");
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-goog-api-key": this.apiKey,
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 2048,
+            },
+          }),
+        });
+
+        let data: any;
+        if (!response.ok) {
+          data = await response.json().catch(() => ({}));
+          const msg = data?.error?.message || response.statusText;
+          throw new Error(`Gemini API error (${modelName}): ${response.status} – ${msg}`);
+        }
+
+        data = (await response.json()) as GeminiResponse;
+
+        const firstText = data.candidates?.[0]?.content?.parts?.find(
+          (p: any) => typeof p.text === "string"
+        )?.text;
+
+        if (!firstText) {
+          throw new Error("No text candidates returned from Gemini API");
+        }
+
+        return this.parseGeneratedPlan(firstText);
+      } catch (err: any) {
+        lastError = err;
+        if (err.message?.includes("404") || err.message?.includes("not found")) {
+          continue;
+        }
+        throw err;
+      }
     }
 
-    data = (await response.json()) as GeminiResponse;
-
-    const firstText = data.candidates?.[0]?.content?.parts?.find(
-      (p: any) => typeof p.text === "string"
-    )?.text;
-
-    if (!firstText) {
-      throw new Error("No text candidates returned from Gemini API");
-    }
-
-    return this.parseGeneratedPlan(firstText);
+    throw lastError || new Error("Failed to generate daily plan with Gemini API");
   }
 
   private buildPrompt(rawTasks: string, userSettings?: any): string {
@@ -169,12 +194,36 @@ Make sure the response is valid JSON and includes all tasks from the user's inpu
 }
 
 let aiService: AIService | null = null;
-export function initializeAI(apiKey: string): void {
-  aiService = new AIService(apiKey);
-}
-export function getAIService(): AIService {
-  if (!aiService)
-    throw new Error("AI service not initialized. Call initializeAI() first.");
+
+export function initializeAI(apiKey?: string): AIService {
+  const key = apiKey || getEnvApiKey();
+  if (!key) {
+    throw new Error("AI service initialization failed: VITE_GEMINI_API_KEY is not defined.");
+  }
+  aiService = new AIService(key);
   return aiService;
 }
+
+export function getAIService(): AIService {
+  if (!aiService) {
+    const key = getEnvApiKey();
+    if (key) {
+      aiService = new AIService(key);
+    }
+  }
+  if (!aiService) {
+    throw new Error("AI service not initialized. Please configure VITE_GEMINI_API_KEY in your .env file or call initializeAI(apiKey).");
+  }
+  return aiService;
+}
+
+try {
+  const envKey = getEnvApiKey();
+  if (envKey) {
+    aiService = new AIService(envKey);
+  }
+} catch {
+  // Ignore
+}
+
 export { AIService };

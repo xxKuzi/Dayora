@@ -123,16 +123,10 @@ export default function App() {
 
   // Initialize AI service on component mount
   useEffect(() => {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (apiKey) {
-      try {
-        initializeAI(apiKey);
-        setAiError(null);
-      } catch (error) {
-        console.error("Failed to initialize AI service:", error);
-        setAiError("Failed to initialize AI service");
-      }
-    } else {
+    try {
+      initializeAI();
+      setAiError(null);
+    } catch {
       console.warn("VITE_GEMINI_API_KEY not found in environment variables");
       setAiError("AI API key not configured");
     }
