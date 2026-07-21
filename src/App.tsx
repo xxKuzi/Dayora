@@ -50,7 +50,7 @@ export default function App() {
   );
 
   const setNotesWithTransition = (
-    update: Note[] | ((prev: Note[]) => Note[])
+    update: Note[] | ((prev: Note[]) => Note[]),
   ) => {
     if (document.startViewTransition) {
       document.startViewTransition(() => {
@@ -128,7 +128,7 @@ export default function App() {
         return initial.cookiesAccepted ? "accepted" : "declined";
       }
       return undefined;
-    })()
+    })(),
   );
   const [aiError, setAiError] = useState<string | null>(null);
 
@@ -182,7 +182,10 @@ export default function App() {
   // Save comfortable typing preference to local storage when it changes
   useEffect(() => {
     if (cookiePreference !== "declined") {
-      localStorage.setItem("dayora_comfortable_typing", String(comfortableTyping));
+      localStorage.setItem(
+        "dayora_comfortable_typing",
+        String(comfortableTyping),
+      );
     }
   }, [comfortableTyping, cookiePreference]);
 
@@ -569,12 +572,11 @@ export default function App() {
               size="sm"
               className="!bg-gray-600 hover:!bg-gray-700 !text-white !border-gray-500 hover:!scale-100 !rounded-full !w-8 !h-8 !p-0 flex items-center justify-center"
             >
-              <div className="relative w-4 h-4">
-                {/* Outer circle */}
-                <div className="absolute inset-0 rounded-full border-2 border-white"></div>
-                {/* Inner fill - only visible when comfortable typing is active */}
-                {comfortableTyping && (
-                  <div className="absolute inset-0.5 rounded-full bg-white"></div>
+              <div className="relative w-4 h-4 flex items-center justify-center">
+                {comfortableTyping ? (
+                  <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
+                ) : (
+                  <div className="absolute inset-0 rounded-full border-2 border-white"></div>
                 )}
               </div>
             </Button>
@@ -686,7 +688,9 @@ export default function App() {
                 notesListVisible={notesListVisible}
                 onToggleNotesList={() => setNotesListVisible(!notesListVisible)}
                 comfortableTyping={comfortableTyping}
-                onToggleComfortableTyping={() => setComfortableTyping(!comfortableTyping)}
+                onToggleComfortableTyping={() =>
+                  setComfortableTyping(!comfortableTyping)
+                }
                 onToggleAllPanels={handleToggleAllPanels}
               />
             </>

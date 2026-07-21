@@ -88,10 +88,10 @@ export default function Editor({
               <button
                 onClick={onToggleSidebar}
                 title={`${sidebarVisible ? "Hide" : "Show"} Sidebar (Ctrl/Cmd+B)`}
-                className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 active:scale-95 ${
+                className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 active:scale-95 hover:bg-zinc-300/50 dark:hover:bg-zinc-700/40 ${
                   sidebarVisible
-                    ? "bg-zinc-100 dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-300/50 dark:hover:bg-zinc-700/40"
+                    ? "text-zinc-900 dark:text-zinc-100"
+                    : "text-zinc-400 dark:text-zinc-600"
                 }`}
               >
                 <svg
@@ -114,10 +114,10 @@ export default function Editor({
               <button
                 onClick={onToggleNotesList}
                 title={`${notesListVisible ? "Hide" : "Show"} Notes List (Ctrl/Cmd+N)`}
-                className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 active:scale-95 ${
+                className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 active:scale-95 hover:bg-zinc-300/50 dark:hover:bg-zinc-700/40 ${
                   notesListVisible
-                    ? "bg-zinc-100 dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-300/50 dark:hover:bg-zinc-700/40"
+                    ? "text-zinc-900 dark:text-zinc-100"
+                    : "text-zinc-400 dark:text-zinc-600"
                 }`}
               >
                 <svg
@@ -175,24 +175,26 @@ export default function Editor({
               </button>
             )}
 
-            {onToggleComfortableTyping && (!sidebarVisible || !notesListVisible) && (
-              <button
-                onClick={onToggleComfortableTyping}
-                title={`${comfortableTyping ? "Disable" : "Enable"} Comfortable Typing`}
-                className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 active:scale-95 ${
-                  comfortableTyping
-                    ? "bg-zinc-100 dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-300/50 dark:hover:bg-zinc-700/40"
-                }`}
-              >
-                <div className="relative w-3.5 h-3.5">
-                  <div className="absolute inset-0 rounded-full border-2 border-current"></div>
-                  {comfortableTyping && (
-                    <div className="absolute inset-0.5 rounded-full bg-current"></div>
-                  )}
-                </div>
-              </button>
-            )}
+            {onToggleComfortableTyping &&
+              (!sidebarVisible || !notesListVisible) && (
+                <button
+                  onClick={onToggleComfortableTyping}
+                  title={`${comfortableTyping ? "Disable" : "Enable"} Comfortable Typing`}
+                  className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 active:scale-95 hover:bg-zinc-300/50 dark:hover:bg-zinc-700/40 ${
+                    comfortableTyping
+                      ? "text-zinc-900 dark:text-zinc-100"
+                      : "text-zinc-400 dark:text-zinc-600"
+                  }`}
+                >
+                  <div className="relative w-3.5 h-3.5 flex items-center justify-center">
+                    {comfortableTyping ? (
+                      <div className="w-2.5 h-2.5 rounded-full bg-current"></div>
+                    ) : (
+                      <div className="absolute inset-0 rounded-full border-2 border-current"></div>
+                    )}
+                  </div>
+                </button>
+              )}
           </div>
           <Input
             value={draftTitle}
