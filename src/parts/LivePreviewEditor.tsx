@@ -410,7 +410,7 @@ export default function LivePreviewEditor({
       } else if (match[3]) {
         // Italic
         result.push(
-          <em key={matchIndex} className="italic text-zinc-200">
+          <em key={matchIndex} className="italic text-zinc-100">
             {match[4]}
           </em>,
         );
@@ -516,7 +516,7 @@ export default function LivePreviewEditor({
               className="custom-checkbox"
             />
             <span
-              className={`text-zinc-200 ${checked ? "line-through opacity-50" : ""}`}
+              className={`text-zinc-100 ${checked ? "line-through opacity-50" : ""}`}
             >
               {renderInline(content.slice(4))}
             </span>
@@ -524,7 +524,7 @@ export default function LivePreviewEditor({
         );
       }
       return (
-        <ul className="list-disc pl-5 text-zinc-200">
+        <ul className="list-disc pl-5 text-zinc-100">
           <li
             className={!readOnly ? "cursor-text" : ""}
             onClick={() => handleLineClick(index)}
@@ -542,7 +542,7 @@ export default function LivePreviewEditor({
       const content = orderedListMatch[2];
       return (
         <ol
-          className="list-decimal pl-5 text-zinc-200"
+          className="list-decimal pl-5 text-zinc-100"
           start={parseInt(num, 10)}
         >
           <li
@@ -582,7 +582,7 @@ export default function LivePreviewEditor({
     // 8. Normal paragraph text
     return (
       <p
-        className={`text-zinc-200 leading-relaxed ${!readOnly ? "cursor-text" : ""}`}
+        className={`text-zinc-100 leading-relaxed ${!readOnly ? "cursor-text" : ""}`}
         onClick={() => handleLineClick(index)}
       >
         {renderInline(text)}
@@ -606,14 +606,14 @@ export default function LivePreviewEditor({
     if (text.startsWith("> ")) {
       return "border-l-4 border-zinc-500 pl-4 italic text-zinc-400 leading-relaxed h-[1.625em] m-0 p-0";
     }
-    return "text-zinc-200 dark:text-zinc-200 leading-relaxed h-[1.625em] m-0 p-0";
+    return "text-zinc-100 dark:text-zinc-100 leading-relaxed h-[1.625em] m-0 p-0";
   };
 
   return (
     <div
       ref={containerRef}
       onClick={handleContainerClick}
-      className={`flex-1 overflow-y-auto w-full px-3 py-2 space-y-2.5 leading-relaxed focus:outline-none min-h-[200px] ${className}`}
+      className={`flex-1 overflow-y-auto w-full px-3 py-2 leading-relaxed focus:outline-none min-h-[200px] ${className}`}
     >
       {lines.map((line, index) => {
         const { isChecklist, checked, marker, content } =
