@@ -76,7 +76,7 @@ export default function Textarea({
       onChange={onChange}
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
-      className={`w-full resize-none bg-transparent outline-none leading-relaxed px-3 py-2 rounded-lg text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:ring-2 focus:ring-blue-500/50 transition-all duration-200 ${className}`}
+      className={`w-full resize-none bg-transparent outline-none leading-relaxed px-3 py-2 rounded-lg text-zinc-100 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:ring-0 focus:outline-none transition-all duration-200 ${className}`}
     />
   );
 }

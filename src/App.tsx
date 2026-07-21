@@ -12,11 +12,7 @@ import type {
 import { Button } from "./components";
 import { nid, fid, deriveTitleFromBody, load, save } from "./utils";
 import { Sidebar, NotesList } from "./parts";
-import {
-  Editor,
-  DailyPlan as DailyPlanComponent,
-  Settings,
-} from "./pages";
+import { Editor, DailyPlan as DailyPlanComponent, Settings } from "./pages";
 import { CookieBanner } from "./components";
 import { initializeAI, getAIService } from "./services/ai";
 
@@ -29,7 +25,7 @@ export default function App() {
       { id: "f-default", name: "Notes" },
       { id: "f-ideas", name: "Ideas" },
       { id: "f-trash", name: "Trash" },
-    ]
+    ],
   );
   const [notes, setNotes] = useState<Note[]>(
     initial?.notes ?? [
@@ -49,13 +45,13 @@ export default function App() {
         updatedAt: Date.now() - 10000,
         folderId: "f-default",
       },
-    ]
+    ],
   );
   const [activeFolderId, setActiveFolderId] = useState<string>(
-    initial?.activeFolderId ?? folders[0]?.id ?? "f-default"
+    initial?.activeFolderId ?? folders[0]?.id ?? "f-default",
   );
   const [activeNoteId, setActiveNoteId] = useState<string | null>(
-    initial?.activeNoteId ?? notes[0]?.id ?? null
+    initial?.activeNoteId ?? notes[0]?.id ?? null,
   );
   const [query, setQuery] = useState<string>(initial?.query ?? "");
   const deferredQuery = useDeferredValue(query);
@@ -68,7 +64,7 @@ export default function App() {
     return "auto";
   });
   const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(
-    window.matchMedia("(prefers-color-scheme: dark)").matches
+    window.matchMedia("(prefers-color-scheme: dark)").matches,
   );
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
   const [notesListVisible, setNotesListVisible] = useState<boolean>(true);
@@ -77,7 +73,7 @@ export default function App() {
     "notes" | "daily-plan" | "settings"
   >("notes");
   const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>(
-    initial?.dailyPlans ?? []
+    initial?.dailyPlans ?? [],
   );
   const [settings, setSettings] = useState<UserSettings>(
     initial?.settings ?? {
@@ -93,7 +89,7 @@ export default function App() {
       },
       habits: [],
       goals: [],
-    }
+    },
   );
   const [cookiePreference, setCookiePreference] = useState<
     CookiePreference | undefined
@@ -109,7 +105,7 @@ export default function App() {
         return initial.cookiesAccepted ? "accepted" : "declined";
       }
       return undefined;
-    })()
+    })(),
   );
   const [aiError, setAiError] = useState<string | null>(null);
 
@@ -176,21 +172,21 @@ export default function App() {
         prevNotes.map((note) =>
           "folderId" in note
             ? note
-            : { ...(note as Note), folderId: "f-default" }
-        )
+            : { ...(note as Note), folderId: "f-default" },
+        ),
       );
     }
   }, [folders, notes]);
 
   const trashId = useMemo(
     () => folders.find((f) => f.name === "Trash")?.id ?? "f-trash",
-    [folders]
+    [folders],
   );
 
   // Active note + local editor drafts (for instant typing)
   const activeNote = useMemo<Note | null>(
     () => notes.find((n) => n.id === activeNoteId) ?? null,
-    [notes, activeNoteId]
+    [notes, activeNoteId],
   );
   const [draftTitle, setDraftTitle] = useState<string>(activeNote?.title ?? "");
   const [draftBody, setDraftBody] = useState<string>(activeNote?.body ?? "");
@@ -211,8 +207,8 @@ export default function App() {
         ns.map((n) =>
           n.id === activeNote.id
             ? { ...n, title, body: draftBody, updatedAt: Date.now() }
-            : n
-        )
+            : n,
+        ),
       );
     }, 200);
     return () => window.clearTimeout(h);
@@ -256,14 +252,14 @@ export default function App() {
   // ---- Derived lists ----
   const visibleNotes = useMemo(() => {
     const inFolder = notes.filter((n) =>
-      activeFolderId === trashId ? !!n.trashed : !n.trashed
+      activeFolderId === trashId ? !!n.trashed : !n.trashed,
     );
 
     const filteredByFolder =
       activeFolderId === trashId
         ? inFolder
         : inFolder.filter(
-            (n) => n.folderId === activeFolderId || activeFolderId === "f-all"
+            (n) => n.folderId === activeFolderId || activeFolderId === "f-all",
           );
 
     const q = deferredQuery.trim().toLowerCase();
@@ -271,7 +267,7 @@ export default function App() {
       ? filteredByFolder.filter(
           (n) =>
             n.title.toLowerCase().includes(q) ||
-            n.body.toLowerCase().includes(q)
+            n.body.toLowerCase().includes(q),
         )
       : filteredByFolder;
 
@@ -296,7 +292,7 @@ export default function App() {
     const name = prompt("Rename folder:", folder.name);
     if (!name) return;
     setFolders((fs) =>
-      fs.map((f) => (f.id === id ? { ...f, name: name.trim() } : f))
+      fs.map((f) => (f.id === id ? { ...f, name: name.trim() } : f)),
     );
   }
 
@@ -312,7 +308,7 @@ export default function App() {
 
     // Move notes to Trash
     const updated = notes.map((n) =>
-      n.folderId === id ? { ...n, trashed: true, updatedAt: Date.now() } : n
+      n.folderId === id ? { ...n, trashed: true, updatedAt: Date.now() } : n,
     );
     setNotes(updated);
     // Remove folder
@@ -352,8 +348,8 @@ export default function App() {
     // move to trash
     setNotes((ns) =>
       ns.map((n) =>
-        n.id === note.id ? { ...n, trashed: true, updatedAt: Date.now() } : n
-      )
+        n.id === note.id ? { ...n, trashed: true, updatedAt: Date.now() } : n,
+      ),
     );
     if (activeFolderId !== trashId) setActiveFolderId(trashId);
   }
@@ -362,8 +358,8 @@ export default function App() {
     if (!note) return;
     setNotes((ns) =>
       ns.map((n) =>
-        n.id === note.id ? { ...n, trashed: false, updatedAt: Date.now() } : n
-      )
+        n.id === note.id ? { ...n, trashed: false, updatedAt: Date.now() } : n,
+      ),
     );
   }
 
@@ -372,16 +368,16 @@ export default function App() {
       ns.map((n) =>
         n.id === note.id
           ? { ...n, pinned: !n.pinned, updatedAt: Date.now() }
-          : n
-      )
+          : n,
+      ),
     );
   }
 
   function handleMoveNote(note: Note, folderId: string) {
     setNotes((ns) =>
       ns.map((n) =>
-        n.id === note.id ? { ...n, folderId, updatedAt: Date.now() } : n
-      )
+        n.id === note.id ? { ...n, folderId, updatedAt: Date.now() } : n,
+      ),
     );
   }
 
@@ -419,7 +415,7 @@ export default function App() {
 
   function handleUpdateDailyPlan(updatedPlan: DailyPlan) {
     setDailyPlans((prev) =>
-      prev.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan))
+      prev.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan)),
     );
   }
 
@@ -454,7 +450,7 @@ export default function App() {
       setAiError(
         error instanceof Error
           ? error.message
-          : "Failed to generate plan with AI"
+          : "Failed to generate plan with AI",
       );
       // Don't automatically fall back - let user choose
     }
@@ -480,36 +476,7 @@ export default function App() {
     <div className={"w-full h-screen flex " + (isDark ? "dark" : "")}>
       {/* Fixed Toggle Buttons - Top Right Corner */}
       <div className="fixed top-2 right-4 z-50 flex items-center gap-2">
-        <Button
-          onClick={handleToggleAllPanels}
-          title={`${
-            sidebarVisible || notesListVisible ? "Hide" : "Show"
-          } All Panels`}
-          size="sm"
-          className="!bg-blue-600 hover:!bg-blue-700 !text-white !border-blue-500 hover:!scale-100"
-        >
-          {sidebarVisible || notesListVisible ? "◀◀" : "▶▶"}
-        </Button>
-        {sidebarVisible || notesListVisible ? (
-          <>
-            <Button
-              onClick={() => setSidebarVisible(!sidebarVisible)}
-              title={`${sidebarVisible ? "Hide" : "Show"} Sidebar (Ctrl/Cmd+B)`}
-              size="sm"
-            >
-              {sidebarVisible ? "◀" : "▶"}
-            </Button>
-            <Button
-              onClick={() => setNotesListVisible(!notesListVisible)}
-              title={`${
-                notesListVisible ? "Hide" : "Show"
-              } Notes List (Ctrl/Cmd+N)`}
-              size="sm"
-            >
-              {notesListVisible ? "◀" : "▶"}
-            </Button>
-          </>
-        ) : (
+        {(!sidebarVisible || !notesListVisible) && (
           /* Comfortable Typing Button - only when panels are hidden */
           <Button
             onClick={() => setComfortableTyping(!comfortableTyping)}
@@ -529,11 +496,41 @@ export default function App() {
             </div>
           </Button>
         )}
+        <Button
+          onClick={handleToggleAllPanels}
+          title={`${
+            sidebarVisible || notesListVisible ? "Hide" : "Show"
+          } All Panels`}
+          size="sm"
+          className="!bg-blue-600 hover:!bg-blue-700 !text-white !border-blue-500 hover:!scale-100"
+        >
+          {sidebarVisible || notesListVisible ? "◀◀" : "▶▶"}
+        </Button>
+        {(sidebarVisible || notesListVisible) && (
+          <>
+            <Button
+              onClick={() => setSidebarVisible(!sidebarVisible)}
+              title={`${sidebarVisible ? "Hide" : "Show"} Sidebar (Ctrl/Cmd+B)`}
+              size="sm"
+            >
+              {sidebarVisible ? "◀" : "▶"}
+            </Button>
+            <Button
+              onClick={() => setNotesListVisible(!notesListVisible)}
+              title={`${
+                notesListVisible ? "Hide" : "Show"
+              } Notes List (Ctrl/Cmd+N)`}
+              size="sm"
+            >
+              {notesListVisible ? "◀" : "▶"}
+            </Button>
+          </>
+        )}
       </div>
 
       <div className="w-full h-full flex text-zinc-900 dark:text-zinc-100">
         {sidebarVisible && (
-          <div className="fixed left-0 top-0 h-screen bg-gradient-to-b from-[#667eea] via-[#667eea] to-[#764ba2] z-10">
+          <div className="fixed left-0 top-0 h-screen bg-zinc-100 dark:bg-zinc-950 z-10">
             <Sidebar
               folders={folders}
               activeFolderId={activeFolderId}
@@ -551,16 +548,20 @@ export default function App() {
 
         {/* Main Content Area */}
         <div
-          className={`flex-1 bg-black/d0 ${
+          className={`flex-1 h-screen flex flex-col bg-black/d0 ${
             activeView === "notes" && notesListVisible
               ? sidebarVisible
                 ? "ml-[560px]"
-                : "ml-80"
+                : comfortableTyping
+                  ? "ml-[400px]"
+                  : "ml-80"
               : sidebarVisible
-              ? "ml-60"
-              : comfortableTyping && !sidebarVisible && !notesListVisible
-              ? "ml-20"
-              : ""
+                ? comfortableTyping
+                  ? "ml-80"
+                  : "ml-60"
+                : comfortableTyping
+                  ? "ml-20"
+                  : ""
           }`}
         >
           {activeView === "notes" && (
@@ -595,6 +596,7 @@ export default function App() {
                 onDeleteNote={handleDeleteNote}
                 onRestoreNote={handleRestoreNote}
                 onMoveNote={handleMoveNote}
+                showLastEdited={sidebarVisible && notesListVisible}
               />
             </>
           )}
@@ -603,7 +605,8 @@ export default function App() {
             <DailyPlanComponent
               dailyPlan={
                 dailyPlans.find(
-                  (plan) => plan.date === new Date().toISOString().split("T")[0]
+                  (plan) =>
+                    plan.date === new Date().toISOString().split("T")[0],
                 ) || null
               }
               settings={settings}
