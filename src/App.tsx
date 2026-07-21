@@ -29,6 +29,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
   const [isSynced, setIsSynced] = useState<boolean>(false);
+  const [loadingAuth, setLoadingAuth] = useState<boolean>(true);
 
   const lastSyncedFoldersRef = useRef<Folder[]>([]);
   const lastSyncedNotesRef = useRef<Note[]>([]);
@@ -186,12 +187,18 @@ export default function App() {
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
-  // Save dark mode preference to local storage when it changes
+  // Save dark mode preference to local storage or Firestore when it changes
   useEffect(() => {
-    if (cookiePreference !== "declined") {
+    const database = db;
+    if (user) {
+      if (isSynced && database) {
+        setDoc(doc(database, "users", user.uid), { darkMode }, { merge: true })
+          .catch((err) => console.error("Error syncing darkMode:", err));
+      }
+    } else if (cookiePreference !== "declined") {
       localStorage.setItem("dayora_dark_mode", darkMode);
     }
-  }, [darkMode, cookiePreference]);
+  }, [darkMode, cookiePreference, user, isSynced]);
 
   // Synchronize dark class on document element for tailwind and global styles
   useEffect(() => {
@@ -202,15 +209,21 @@ export default function App() {
     }
   }, [isDark]);
 
-  // Save comfortable typing preference to local storage when it changes
+  // Save comfortable typing preference to local storage or Firestore when it changes
   useEffect(() => {
-    if (cookiePreference !== "declined") {
+    const database = db;
+    if (user) {
+      if (isSynced && database) {
+        setDoc(doc(database, "users", user.uid), { comfortableTyping }, { merge: true })
+          .catch((err) => console.error("Error syncing comfortableTyping:", err));
+      }
+    } else if (cookiePreference !== "declined") {
       localStorage.setItem(
         "dayora_comfortable_typing",
         String(comfortableTyping),
       );
     }
-  }, [comfortableTyping, cookiePreference]);
+  }, [comfortableTyping, cookiePreference, user, isSynced]);
 
   // Keyboard shortcuts for toggling sections
   useEffect(() => {
@@ -268,7 +281,10 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (!auth) return;
+    if (!auth) {
+      setLoadingAuth(false);
+      return;
+    }
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
@@ -282,6 +298,9 @@ export default function App() {
           const plansSnap = await getDocs(collection(db!, "users", firebaseUser.uid, "dailyPlans"));
 
           const dbSettings = userDocSnap.exists() ? userDocSnap.data().settings : null;
+          const dbDarkMode = userDocSnap.exists() ? userDocSnap.data().darkMode : null;
+          const dbComfortableTyping = userDocSnap.exists() ? userDocSnap.data().comfortableTyping : null;
+          const dbCookiePreference = userDocSnap.exists() ? userDocSnap.data().cookiePreference : null;
           const dbFolders = foldersSnap.docs.map((doc) => doc.data() as Folder);
           const dbNotes = notesSnap.docs.map((doc) => doc.data() as Note);
           const dbPlans = plansSnap.docs.map((doc) => doc.data() as DailyPlan);
@@ -290,6 +309,9 @@ export default function App() {
 
           if (hasFirestoreData) {
             if (dbSettings) setSettings(dbSettings);
+            if (dbDarkMode) setDarkMode(dbDarkMode);
+            if (dbComfortableTyping !== undefined && dbComfortableTyping !== null) setComfortableTyping(dbComfortableTyping);
+            if (dbCookiePreference) setCookiePreference(dbCookiePreference);
             if (dbFolders.length > 0) setFolders(dbFolders);
             if (dbNotes.length > 0) {
               setNotes(dbNotes);
@@ -299,7 +321,12 @@ export default function App() {
           } else {
             // First sign in migration: Upload local data to Firestore
             const batch = writeBatch(db!);
-            batch.set(userDocRef, { settings });
+            batch.set(userDocRef, {
+              settings,
+              darkMode,
+              comfortableTyping,
+              cookiePreference: "accepted",
+            });
 
             folders.forEach((f) => {
               batch.set(doc(db!, "users", firebaseUser.uid, "folders", f.id), f);
@@ -318,6 +345,7 @@ export default function App() {
           localStorage.removeItem("dayora_v1");
           localStorage.removeItem("dayora_dark_mode");
           localStorage.removeItem("dayora_comfortable_typing");
+          setCookiePreference("accepted");
 
           lastSyncedFoldersRef.current = hasFirestoreData ? dbFolders : folders;
           lastSyncedNotesRef.current = hasFirestoreData ? dbNotes : notes;
@@ -328,6 +356,8 @@ export default function App() {
         } catch (error) {
           console.error("Error loading user data from Firestore:", error);
           setIsSynced(true);
+        } finally {
+          setLoadingAuth(false);
         }
       } else {
         setIsSynced(false);
@@ -381,6 +411,7 @@ export default function App() {
             goals: [],
           });
         }
+        setLoadingAuth(false);
       }
     });
     return () => unsub();
@@ -993,7 +1024,7 @@ export default function App() {
       </div>
 
       {/* Cookie Banner */}
-      {cookiePreference === undefined && (
+      {!loadingAuth && !user && cookiePreference === undefined && (
         <CookieBanner
           onAccept={handleAcceptCookies}
           onDecline={handleDeclineCookies}
