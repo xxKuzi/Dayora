@@ -1,4 +1,4 @@
-import React from "react";
+import React, { forwardRef } from "react";
 
 interface InputProps {
   value: string;
@@ -7,30 +7,46 @@ interface InputProps {
   className?: string;
   type?: string;
   onKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   min?: string;
   max?: string;
+  autoFocus?: boolean;
 }
 
-export default function Input({
-  value,
-  onChange,
-  placeholder,
-  className = "",
-  type = "text",
-  onKeyPress,
-  min,
-  max,
-}: InputProps) {
-  return (
-    <input
-      type={type}
-      value={value}
-      onChange={onChange}
-      onKeyPress={onKeyPress}
-      placeholder={placeholder}
-      min={min}
-      max={max}
-      className={`px-3 py-2 rounded-lg bg-white/20 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 outline-none focus:ring-2 focus:ring-blue-500/50 border border-white/30 dark:border-zinc-600/50 backdrop-blur-sm transition-all duration-200 ${className}`}
-    />
-  );
-}
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  (
+    {
+      value,
+      onChange,
+      placeholder,
+      className = "",
+      type = "text",
+      onKeyPress,
+      onKeyDown,
+      min,
+      max,
+      autoFocus,
+    },
+    ref,
+  ) => {
+    return (
+      <input
+        ref={ref}
+        type={type}
+        value={value}
+        onChange={onChange}
+        onKeyPress={onKeyPress}
+        onKeyDown={onKeyDown}
+        placeholder={placeholder}
+        min={min}
+        max={max}
+        autoFocus={autoFocus}
+        className={`px-3 py-2 rounded-lg bg-white/20 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 outline-none focus:ring-2 focus:ring-blue-500/50 border border-white/30 dark:border-zinc-600/50 backdrop-blur-sm transition-all duration-200 ${className}`}
+      />
+    );
+  },
+);
+
+Input.displayName = "Input";
+
+export default Input;

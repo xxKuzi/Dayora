@@ -9,11 +9,11 @@ import type {
   UserSettings,
   CookiePreference,
 } from "./types";
-import { Button } from "./components";
+import { Button, CookieBanner, FolderModal } from "./components";
+import type { FolderModalType } from "./components/FolderModal";
 import { nid, fid, deriveTitleFromBody, load, save } from "./utils";
 import { Sidebar, NotesList } from "./parts";
 import { Editor, DailyPlan as DailyPlanComponent, Settings } from "./pages";
-import { CookieBanner } from "./components";
 import { initializeAI, getAIService } from "./services/ai";
 
 export default function App() {
@@ -105,9 +105,20 @@ export default function App() {
         return initial.cookiesAccepted ? "accepted" : "declined";
       }
       return undefined;
-    })(),
+    })()
   );
   const [aiError, setAiError] = useState<string | null>(null);
+
+  // Folder modal state
+  const [folderModal, setFolderModal] = useState<{
+    isOpen: boolean;
+    type: FolderModalType;
+    folderId: string | null;
+  }>({
+    isOpen: false,
+    type: null,
+    folderId: null,
+  });
 
   // Calculate if we should show dark mode
   const isDark =
@@ -277,35 +288,55 @@ export default function App() {
     });
   }, [notes, activeFolderId, deferredQuery, trashId]);
 
-  // ---- Actions ----
+  // ---- Folder Action Handlers ----
   function handleNewFolder() {
-    const name = prompt("Folder name:", "New Folder");
-    if (!name) return;
-    const f: Folder = { id: fid(), name: name.trim() };
-    setFolders((fs) => [...fs, f]);
-    setActiveFolderId(f.id);
+    setFolderModal({
+      isOpen: true,
+      type: "new",
+      folderId: null,
+    });
   }
 
   function handleRenameFolder(id: string) {
-    const folder = folders.find((f) => f.id === id);
-    if (!folder) return;
-    const name = prompt("Rename folder:", folder.name);
-    if (!name) return;
-    setFolders((fs) =>
-      fs.map((f) => (f.id === id ? { ...f, name: name.trim() } : f)),
-    );
+    setFolderModal({
+      isOpen: true,
+      type: "rename",
+      folderId: id,
+    });
   }
 
   function handleDeleteFolder(id: string) {
+    setFolderModal({
+      isOpen: true,
+      type: "delete",
+      folderId: id,
+    });
+  }
+
+  function handleConfirmNewFolder(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const f: Folder = { id: fid(), name: trimmed };
+    setFolders((fs) => [...fs, f]);
+    setActiveFolderId(f.id);
+    handleCloseFolderModal();
+  }
+
+  function handleConfirmRenameFolder(id: string, newName: string) {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    setFolders((fs) =>
+      fs.map((f) => (f.id === id ? { ...f, name: trimmed } : f)),
+    );
+    handleCloseFolderModal();
+  }
+
+  function handleConfirmDeleteFolder(id: string) {
     const folder = folders.find((f) => f.id === id);
-    if (!folder || folder.name === "Trash") {
-      alert("Cannot delete Trash");
+    if (!folder || folder.name === "Trash" || id === trashId) {
+      handleCloseFolderModal();
       return;
     }
-    const hasNotes = notes.some((n) => n.folderId === id && !n.trashed);
-    if (hasNotes && !confirm("Folder contains notes. Move them to Trash?"))
-      return;
-
     // Move notes to Trash
     const updated = notes.map((n) =>
       n.folderId === id ? { ...n, trashed: true, updatedAt: Date.now() } : n,
@@ -314,6 +345,11 @@ export default function App() {
     // Remove folder
     setFolders((fs) => fs.filter((f) => f.id !== id));
     if (activeFolderId === id) setActiveFolderId(trashId);
+    handleCloseFolderModal();
+  }
+
+  function handleCloseFolderModal() {
+    setFolderModal({ isOpen: false, type: null, folderId: null });
   }
 
   function handleNewNote() {
@@ -633,6 +669,20 @@ export default function App() {
           onDecline={handleDeclineCookies}
         />
       )}
+
+      {/* Folder Modal */}
+      <FolderModal
+        isOpen={folderModal.isOpen}
+        type={folderModal.type}
+        folder={folders.find((f) => f.id === folderModal.folderId) ?? null}
+        hasNotes={notes.some(
+          (n) => n.folderId === folderModal.folderId && !n.trashed,
+        )}
+        onClose={handleCloseFolderModal}
+        onConfirmNew={handleConfirmNewFolder}
+        onConfirmRename={handleConfirmRenameFolder}
+        onConfirmDelete={handleConfirmDeleteFolder}
+      />
     </div>
   );
 }

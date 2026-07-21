@@ -65,24 +65,51 @@ export default function Sidebar({
           </div>
 
           <div className="flex-1 overflow-auto space-y-1">
-            {folders.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => onFolderSelect(f.id)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                  activeFolderId === f.id
-                    ? "bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-900 dark:text-zinc-100 font-medium"
-                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="truncate">{f.name}</span>
-                  <span className="text-xs opacity-60 ml-2">
-                    {countInFolder(f.id, notes, folders, trashId)}
-                  </span>
+            {folders.map((f) => {
+              const isTrash = f.id === trashId || f.name === "Trash";
+              return (
+                <div
+                  key={f.id}
+                  className={`group/folder flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                    activeFolderId === f.id
+                      ? "bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-900 dark:text-zinc-100 font-medium"
+                      : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
+                  }`}
+                  onClick={() => onFolderSelect(f.id)}
+                >
+                  <span className="truncate flex-1">{f.name}</span>
+                  <div className="flex items-center gap-1.5 ml-2">
+                    {!isTrash && (
+                      <div className="opacity-0 group-hover/folder:opacity-100 flex items-center gap-1 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRenameFolder(f.id);
+                          }}
+                          title="Rename folder"
+                          className="p-0.5 text-xs text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded transition-colors"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteFolder(f.id);
+                          }}
+                          title="Delete folder"
+                          className="p-0.5 text-xs text-zinc-400 hover:text-red-500 rounded transition-colors"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    )}
+                    <span className="text-xs opacity-60">
+                      {countInFolder(f.id, notes, folders, trashId)}
+                    </span>
+                  </div>
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-auto space-x-2">

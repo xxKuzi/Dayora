@@ -95,7 +95,7 @@ export default function Editor({
         value={draftBody}
         onChange={(e) => onBodyChange(e.target.value)}
         placeholder="Start typing…"
-        className="flex-1 mt-3 h-full resize-none"
+        className="flex-1 mt-3 h-full placeholder:text-zinc-200/50 dark:placeholder:text-zinc-200/50 resize-none"
       />
 
       {showLastEdited && (
