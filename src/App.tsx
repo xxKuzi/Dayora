@@ -179,6 +179,15 @@ export default function App() {
     }
   }, [darkMode, cookiePreference]);
 
+  // Synchronize dark class on document element for tailwind and global styles
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [isDark]);
+
   // Save comfortable typing preference to local storage when it changes
   useEffect(() => {
     if (cookiePreference !== "declined") {

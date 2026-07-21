@@ -14,8 +14,12 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #573776 0%, #4a5ba4 100%);
+  background: linear-gradient(135deg, #76376b 0%, #4a6ca4 100%);
   min-height: 100vh;
+}
+
+.dark body {
+  background: linear-gradient(135deg, #573776 0%, #4a5ba4 100%);
 }
 
 #root {
