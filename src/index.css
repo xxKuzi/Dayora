@@ -105,7 +105,7 @@ textarea:focus-visible {
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
   appearance: none !important;
-  border: 2px solid rgba(0, 0, 0, 0.3) !important;
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
   border-radius: 4px;
   background-color: transparent !important;
   position: relative;
@@ -120,9 +120,7 @@ textarea:focus-visible {
   transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease !important;
 }
 
-.dark .custom-checkbox {
-  border-color: rgba(255, 255, 255, 0.4) !important;
-}
+
 
 .custom-checkbox:hover {
   border-color: #2563eb !important;
