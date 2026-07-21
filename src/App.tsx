@@ -617,6 +617,11 @@ export default function App() {
                     onNewNote={handleNewNote}
                     onToggleDarkMode={handleToggleDarkMode}
                     darkMode={darkMode}
+                    folders={folders}
+                    onTogglePin={togglePin}
+                    onDeleteNote={handleDeleteNote}
+                    onRestoreNote={handleRestoreNote}
+                    onMoveNote={handleMoveNote}
                   />
                 </div>
               )}
@@ -625,13 +630,8 @@ export default function App() {
                 activeNote={activeNote}
                 draftTitle={draftTitle}
                 draftBody={draftBody}
-                folders={folders}
                 onTitleChange={setDraftTitle}
                 onBodyChange={setDraftBody}
-                onTogglePin={togglePin}
-                onDeleteNote={handleDeleteNote}
-                onRestoreNote={handleRestoreNote}
-                onMoveNote={handleMoveNote}
                 showLastEdited={sidebarVisible && notesListVisible}
               />
             </>

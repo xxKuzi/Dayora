@@ -46,18 +46,18 @@ export default function MenuButton({
 
   return (
     <div
-      className={`relative flex items-center justify-center mx-2 ${className}`}
+      className={`relative flex items-center justify-center ${className}`}
       ref={menuRef}
     >
       <button
         onClick={() => setIsOpen(!isOpen)}
         title={title}
-        className="px-2 py-1 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+        className="p-1 rounded text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60 transition-all"
       >
-        <div className="flex flex-col gap-1">
-          <div className="w-1 h-1 bg-current rounded-full"></div>
-          <div className="w-1 h-1 bg-current rounded-full"></div>
-          <div className="w-1 h-1 bg-current rounded-full"></div>
+        <div className="flex flex-col gap-[2px] items-center justify-center">
+          <div className="w-[2.5px] h-[2.5px] bg-current rounded-full"></div>
+          <div className="w-[2.5px] h-[2.5px] bg-current rounded-full"></div>
+          <div className="w-[2.5px] h-[2.5px] bg-current rounded-full"></div>
         </div>
       </button>
 

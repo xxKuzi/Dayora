@@ -1,17 +1,12 @@
-import type { Note, Folder } from "../types";
-import { Input, Textarea, MenuButton } from "../components";
+import type { Note } from "../types";
+import { Input, Textarea } from "../components";
 
 interface EditorProps {
   activeNote: Note | null;
   draftTitle: string;
   draftBody: string;
-  folders: Folder[];
   onTitleChange: (title: string) => void;
   onBodyChange: (body: string) => void;
-  onTogglePin: (note: Note) => void;
-  onDeleteNote: (note: Note | null) => void;
-  onRestoreNote: (note: Note | null) => void;
-  onMoveNote: (note: Note, folderId: string) => void;
   showLastEdited?: boolean;
 }
 
@@ -19,13 +14,8 @@ export default function Editor({
   activeNote,
   draftTitle,
   draftBody,
-  folders,
   onTitleChange,
   onBodyChange,
-  onTogglePin,
-  onDeleteNote,
-  onRestoreNote,
-  onMoveNote,
   showLastEdited = true,
 }: EditorProps) {
   if (!activeNote) {
@@ -45,48 +35,6 @@ export default function Editor({
             onChange={(e) => onTitleChange(e.target.value)}
             placeholder="Title"
             className="flex-1 text-2xl font-semibold bg-transparent outline-none px-1 py-2 rounded"
-          />
-          <MenuButton
-            items={[
-              ...(activeNote.trashed
-                ? [
-                    {
-                      label: "Restore",
-                      icon: "↩️",
-                      onClick: () => onRestoreNote(activeNote),
-                    },
-                    {
-                      label: "Delete permanently",
-                      icon: "🗑️",
-                      onClick: () => onDeleteNote(activeNote),
-                      variant: "danger" as const,
-                    },
-                  ]
-                : [
-                    {
-                      label: activeNote.pinned ? "Unpin" : "Pin",
-                      icon: "📌",
-                      onClick: () => onTogglePin(activeNote),
-                    },
-                    ...folders
-                      .filter(
-                        (f) =>
-                          f.name !== "Trash" && f.id !== activeNote.folderId,
-                      )
-                      .map((folder) => ({
-                        label: `Move to ${folder.name}`,
-                        icon: "📁",
-                        onClick: () => onMoveNote(activeNote, folder.id),
-                      })),
-                    {
-                      label: "Delete",
-                      icon: "🗑️",
-                      onClick: () => onDeleteNote(activeNote),
-                      variant: "danger" as const,
-                    },
-                  ]),
-            ]}
-            title="Note actions"
           />
         </div>
       </div>
