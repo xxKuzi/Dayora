@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Note } from "../types";
 import { Input, Textarea } from "../components";
 import { LivePreviewEditor } from "../parts";
@@ -48,13 +48,29 @@ export default function Editor({
     );
   }
 
+  const [hasTyped, setHasTyped] = useState(false);
+
+  useEffect(() => {
+    setHasTyped(false);
+  }, [activeNote?.id]);
+
+  const handleTitleChange = (title: string) => {
+    setHasTyped(true);
+    onTitleChange(title);
+  };
+
+  const handleBodyChange = (body: string) => {
+    setHasTyped(true);
+    onBodyChange(body);
+  };
+
   return (
     <main className="no-transition flex-1 h-full px-4 py-6 flex flex-col min-w-0 overflow-hidden">
       <div className="flex items-center gap-2 justify-between shrink-0">
         <div className="flex items-center gap-2 w-full bg-zinc-200/80 dark:bg-zinc-800 rounded-5xl pr-4">
           <Input
             value={draftTitle}
-            onChange={(e) => onTitleChange(e.target.value)}
+            onChange={(e) => handleTitleChange(e.target.value)}
             placeholder="Title"
             className="flex-1 text-2xl font-semibold bg-transparent outline-none px-1 py-2 rounded"
           />
@@ -68,7 +84,7 @@ export default function Editor({
               }`}
               title="Plain Text Editor"
             >
-              Markdown
+              Text
             </button>
             <button
               onClick={() => changeEditorMode("live")}
@@ -79,18 +95,7 @@ export default function Editor({
               }`}
               title="Live Preview (Obsidian mode)"
             >
-              Live
-            </button>
-            <button
-              onClick={() => changeEditorMode("preview")}
-              className={`px-3 py-1.5 rounded-full font-medium transition-all ${
-                editorMode === "preview"
-                  ? "bg-zinc-100 dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow"
-                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
-              }`}
-              title="Read-only Formatted Preview"
-            >
-              Preview
+              Markdown
             </button>
           </div>
         </div>
@@ -99,26 +104,25 @@ export default function Editor({
       {editorMode === "markdown" ? (
         <Textarea
           value={draftBody}
-          onChange={(e) => onBodyChange(e.target.value)}
+          onChange={(e) => handleBodyChange(e.target.value)}
           placeholder="Start typing…"
           className="flex-1 mt-3 h-full placeholder:text-zinc-200/50 dark:placeholder:text-zinc-200/50 resize-none"
         />
       ) : (
         <LivePreviewEditor
           value={draftBody}
-          onChange={onBodyChange}
+          onChange={handleBodyChange}
           readOnly={editorMode === "preview"}
           placeholder={editorMode === "preview" ? "" : "Start typing…"}
           className="mt-3 placeholder:text-zinc-200/50 dark:placeholder:text-zinc-200/50"
         />
       )}
 
-      {showLastEdited && (
-        <div className="pt-2 text-xs opacity-60 shrink-0">
+      {showLastEdited && !hasTyped && (
+        <div className="pt-2 text-xs text-zinc-200 shrink-0">
           Last edited {new Date(activeNote.updatedAt).toLocaleString()}
         </div>
       )}
     </main>
   );
 }
-

@@ -1,38 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 
-// Auto-sizing Textarea component for focused lines
-interface AutoSizeTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  value: string;
-}
-
-const AutoSizeTextarea = React.forwardRef<
-  HTMLTextAreaElement,
-  AutoSizeTextareaProps
->(({ value, ...props }, ref) => {
-  const localRef = useRef<HTMLTextAreaElement>(null);
-  const resolvedRef = (ref ||
-    localRef) as React.RefObject<HTMLTextAreaElement | null>;
-
-  useEffect(() => {
-    const textarea = resolvedRef.current;
-    if (textarea) {
-      textarea.style.height = "auto";
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    }
-  }, [value]);
-
-  return (
-    <textarea
-      ref={resolvedRef}
-      value={value}
-      {...props}
-      rows={1}
-      style={{ transition: "none" }}
-      className={`w-full bg-transparent outline-none resize-none leading-relaxed focus:ring-0 focus:outline-none ${props.className || ""}`}
-    />
-  );
-});
-AutoSizeTextarea.displayName = "AutoSizeTextarea";
+const BASE_INPUT_CLASS =
+  "w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 p-0";
 
 // Props for the LivePreviewEditor
 interface LivePreviewEditorProps {
@@ -57,7 +26,7 @@ export default function LivePreviewEditor({
   } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const textareaRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const textareaRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const lines = value ? value.split("\n") : [""];
 
@@ -69,16 +38,36 @@ export default function LivePreviewEditor({
   // Helper to parse checklist prefix markers
   const parseChecklistLine = (text: string) => {
     if (text.startsWith("- [ ] ")) {
-      return { isChecklist: true, checked: false, marker: "- [ ] ", content: text.slice(6) };
+      return {
+        isChecklist: true,
+        checked: false,
+        marker: "- [ ] ",
+        content: text.slice(6),
+      };
     }
     if (text.startsWith("- [x] ") || text.startsWith("- [X] ")) {
-      return { isChecklist: true, checked: true, marker: text.slice(0, 6), content: text.slice(6) };
+      return {
+        isChecklist: true,
+        checked: true,
+        marker: text.slice(0, 6),
+        content: text.slice(6),
+      };
     }
     if (text.startsWith("* [ ] ")) {
-      return { isChecklist: true, checked: false, marker: "* [ ] ", content: text.slice(6) };
+      return {
+        isChecklist: true,
+        checked: false,
+        marker: "* [ ] ",
+        content: text.slice(6),
+      };
     }
     if (text.startsWith("* [x] ") || text.startsWith("* [X] ")) {
-      return { isChecklist: true, checked: true, marker: text.slice(0, 6), content: text.slice(6) };
+      return {
+        isChecklist: true,
+        checked: true,
+        marker: text.slice(0, 6),
+        content: text.slice(6),
+      };
     }
     return { isChecklist: false, checked: false, marker: "", content: text };
   };
@@ -104,10 +93,7 @@ export default function LivePreviewEditor({
           if (pos < 0) pos = 0;
           if (pos > textarea.value.length) pos = textarea.value.length;
         }
-        // Small timeout to guarantee DOM has finished updating and layout is stable
-        setTimeout(() => {
-          textarea.setSelectionRange(pos, pos);
-        }, 0);
+        textarea.setSelectionRange(pos, pos);
       }
       setFocusTarget(null);
     }
@@ -144,7 +130,7 @@ export default function LivePreviewEditor({
   };
 
   const handleLineChange = (
-    e: React.ChangeEvent<HTMLTextAreaElement>,
+    e: React.ChangeEvent<HTMLInputElement>,
     index: number,
   ) => {
     const newValue = e.target.value;
@@ -160,12 +146,12 @@ export default function LivePreviewEditor({
   };
 
   const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLTextAreaElement>,
+    e: React.KeyboardEvent<HTMLInputElement>,
     i: number,
   ) => {
     const textarea = e.currentTarget;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
 
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -223,7 +209,7 @@ export default function LivePreviewEditor({
         if (i > 0) {
           e.preventDefault();
           setFocusedLineIndex(i - 1);
-          setFocusTarget({ index: i - 1, cursorPos: "end" });
+          setFocusTarget({ index: i - 1, cursorPos: start });
         }
       }
     } else if (e.key === "ArrowDown") {
@@ -233,14 +219,14 @@ export default function LivePreviewEditor({
         if (i < lines.length - 1) {
           e.preventDefault();
           setFocusedLineIndex(i + 1);
-          setFocusTarget({ index: i + 1, cursorPos: "start" });
+          setFocusTarget({ index: i + 1, cursorPos: start });
         }
       }
     }
   };
 
   const handlePaste = (
-    e: React.ClipboardEvent<HTMLTextAreaElement>,
+    e: React.ClipboardEvent<HTMLInputElement>,
     index: number,
   ) => {
     e.preventDefault();
@@ -248,8 +234,8 @@ export default function LivePreviewEditor({
     if (!text) return;
 
     const textarea = e.currentTarget;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
     const currentValue = textarea.value;
 
     const updatedLineText =
@@ -288,9 +274,9 @@ export default function LivePreviewEditor({
   };
 
   const handleChecklistLineChange = (
-    e: React.ChangeEvent<HTMLTextAreaElement>,
+    e: React.ChangeEvent<HTMLInputElement>,
     index: number,
-    marker: string
+    marker: string,
   ) => {
     const newLines = [...lines];
     newLines[index] = marker + e.target.value;
@@ -298,14 +284,14 @@ export default function LivePreviewEditor({
   };
 
   const handleChecklistKeyDown = (
-    e: React.KeyboardEvent<HTMLTextAreaElement>,
+    e: React.KeyboardEvent<HTMLInputElement>,
     i: number,
     marker: string,
-    content: string
+    content: string,
   ) => {
     const textarea = e.currentTarget;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
 
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -313,11 +299,11 @@ export default function LivePreviewEditor({
       const right = content.slice(start);
 
       // Auto-create next checklist item unchecked
-      const cleanMarker = marker.includes("[x]") 
-        ? marker.replace("[x]", "[ ]") 
-        : marker.includes("[X]") 
-        ? marker.replace("[X]", "[ ]") 
-        : marker;
+      const cleanMarker = marker.includes("[x]")
+        ? marker.replace("[x]", "[ ]")
+        : marker.includes("[X]")
+          ? marker.replace("[X]", "[ ]")
+          : marker;
 
       const newLines = [...lines];
       newLines[i] = marker + left;
@@ -342,7 +328,7 @@ export default function LivePreviewEditor({
         if (i > 0) {
           e.preventDefault();
           setFocusedLineIndex(i - 1);
-          setFocusTarget({ index: i - 1, cursorPos: "end" });
+          setFocusTarget({ index: i - 1, cursorPos: start + 6 });
         }
       }
     } else if (e.key === "ArrowDown") {
@@ -352,31 +338,33 @@ export default function LivePreviewEditor({
         if (i < lines.length - 1) {
           e.preventDefault();
           setFocusedLineIndex(i + 1);
-          setFocusTarget({ index: i + 1, cursorPos: "start" });
+          setFocusTarget({ index: i + 1, cursorPos: start + 6 });
         }
       }
     }
   };
 
   const handleChecklistPaste = (
-    e: React.ClipboardEvent<HTMLTextAreaElement>,
+    e: React.ClipboardEvent<HTMLInputElement>,
     index: number,
     marker: string,
-    content: string
+    content: string,
   ) => {
     e.preventDefault();
     const text = e.clipboardData.getData("text");
     if (!text) return;
 
     const textarea = e.currentTarget;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
 
     const updatedLineText = content.slice(0, start) + text + content.slice(end);
     const pastedLines = updatedLineText.split("\n");
 
     const newLines = [...lines];
-    const splitLinesToInsert = pastedLines.map((l, idx) => idx === 0 ? marker + l : l);
+    const splitLinesToInsert = pastedLines.map((l, idx) =>
+      idx === 0 ? marker + l : l,
+    );
     newLines.splice(index, 1, ...splitLinesToInsert);
 
     onChange(newLines.join("\n"));
@@ -386,15 +374,16 @@ export default function LivePreviewEditor({
     setFocusedLineIndex(lastPastedLineIndex);
     setFocusTarget({
       index: lastPastedLineIndex,
-      cursorPos: lastPastedLineIndex === index 
-        ? marker.length + lastPastedLineText.length 
-        : lastPastedLineText.length
+      cursorPos:
+        lastPastedLineIndex === index
+          ? marker.length + lastPastedLineText.length
+          : lastPastedLineText.length,
     });
   };
 
   // Helper to parse bold, italic, code, links inline
   const renderInline = (text: string): React.ReactNode => {
-    if (!text) return "";
+    if (!text) return "\u200B";
     const regex =
       /(\*\*|__)(.*?)\1|(\*|_)(.*?)\3|(`)(.*?)\5|(\[)(.*?)\]\((.*?)\)/g;
 
@@ -469,28 +458,28 @@ export default function LivePreviewEditor({
     // 1. Headings
     if (text.startsWith("# ")) {
       return (
-        <h1 className="text-3xl font-bold my-3 text-zinc-100 dark:text-zinc-100 leading-tight">
+        <h1 className="text-3xl font-bold text-zinc-100 dark:text-zinc-100 leading-tight">
           {renderInline(text.slice(2))}
         </h1>
       );
     }
     if (text.startsWith("## ")) {
       return (
-        <h2 className="text-2xl font-bold my-2 text-zinc-100 dark:text-zinc-100 leading-tight">
+        <h2 className="text-2xl font-bold text-zinc-100 dark:text-zinc-100 leading-tight">
           {renderInline(text.slice(3))}
         </h2>
       );
     }
     if (text.startsWith("### ")) {
       return (
-        <h3 className="text-xl font-bold my-2 text-zinc-100 dark:text-zinc-100 leading-tight">
+        <h3 className="text-xl font-bold text-zinc-100 dark:text-zinc-100 leading-tight">
           {renderInline(text.slice(4))}
         </h3>
       );
     }
     if (text.startsWith("#### ")) {
       return (
-        <h4 className="text-lg font-bold my-1.5 text-zinc-100 dark:text-zinc-100 leading-tight">
+        <h4 className="text-lg font-bold text-zinc-100 dark:text-zinc-100 leading-tight">
           {renderInline(text.slice(5))}
         </h4>
       );
@@ -499,7 +488,7 @@ export default function LivePreviewEditor({
     // 2. Blockquotes
     if (text.startsWith("> ")) {
       return (
-        <blockquote className="border-l-4 border-zinc-500 pl-4 my-2 italic text-zinc-400">
+        <blockquote className="border-l-4 border-zinc-500 pl-4 italic text-zinc-400 leading-relaxed">
           {renderInline(text.slice(2))}
         </blockquote>
       );
@@ -508,11 +497,15 @@ export default function LivePreviewEditor({
     // 3. Unordered Lists / Checklists
     if (text.startsWith("- ") || text.startsWith("* ")) {
       const content = text.slice(2);
-      if (content.startsWith("[ ] ") || content.startsWith("[x] ") || content.startsWith("[X] ")) {
+      if (
+        content.startsWith("[ ] ") ||
+        content.startsWith("[x] ") ||
+        content.startsWith("[X] ")
+      ) {
         const checked = !content.startsWith("[ ] ");
         return (
           <div
-            className={`flex items-start gap-2.5 my-1.5 group ${!readOnly ? "cursor-text" : ""}`}
+            className={`flex items-start gap-2.5 group ${!readOnly ? "cursor-text" : ""}`}
             onClick={() => handleLineClick(index)}
           >
             <input
@@ -531,8 +524,11 @@ export default function LivePreviewEditor({
         );
       }
       return (
-        <ul className="list-disc pl-5 my-1 text-zinc-200">
-          <li className={!readOnly ? "cursor-text" : ""} onClick={() => handleLineClick(index)}>
+        <ul className="list-disc pl-5 text-zinc-200">
+          <li
+            className={!readOnly ? "cursor-text" : ""}
+            onClick={() => handleLineClick(index)}
+          >
             {renderInline(content)}
           </li>
         </ul>
@@ -546,10 +542,13 @@ export default function LivePreviewEditor({
       const content = orderedListMatch[2];
       return (
         <ol
-          className="list-decimal pl-5 my-1 text-zinc-200"
+          className="list-decimal pl-5 text-zinc-200"
           start={parseInt(num, 10)}
         >
-          <li className={!readOnly ? "cursor-text" : ""} onClick={() => handleLineClick(index)}>
+          <li
+            className={!readOnly ? "cursor-text" : ""}
+            onClick={() => handleLineClick(index)}
+          >
             {renderInline(content)}
           </li>
         </ol>
@@ -559,7 +558,7 @@ export default function LivePreviewEditor({
     // 5. Code blocks fencing
     if (text.startsWith("```")) {
       return (
-        <div className="font-mono text-xs text-pink-400 bg-zinc-800/80 px-2 py-1 my-1 rounded border border-zinc-700">
+        <div className="font-mono text-xs text-pink-400 bg-zinc-800/80 px-2 py-1 rounded border border-zinc-700">
           {text}
         </div>
       );
@@ -574,7 +573,7 @@ export default function LivePreviewEditor({
     if (trimText === "") {
       return (
         <div
-          className={`h-6 w-full ${!readOnly ? "cursor-text" : ""}`}
+          className={`h-[1.625em] w-full ${!readOnly ? "cursor-text" : ""}`}
           onClick={() => handleLineClick(index)}
         />
       );
@@ -583,7 +582,7 @@ export default function LivePreviewEditor({
     // 8. Normal paragraph text
     return (
       <p
-        className={`my-1.5 text-zinc-200 leading-relaxed ${!readOnly ? "cursor-text" : ""}`}
+        className={`text-zinc-200 leading-relaxed ${!readOnly ? "cursor-text" : ""}`}
         onClick={() => handleLineClick(index)}
       >
         {renderInline(text)}
@@ -593,31 +592,32 @@ export default function LivePreviewEditor({
 
   const getTextareaClassName = (text: string): string => {
     if (text.startsWith("# ")) {
-      return "text-3xl font-bold text-zinc-100 dark:text-zinc-100 my-1";
+      return "text-3xl font-bold text-zinc-100 dark:text-zinc-100 leading-tight h-[1.25em] m-0 p-0";
     }
     if (text.startsWith("## ")) {
-      return "text-2xl font-bold text-zinc-100 dark:text-zinc-100 my-1";
+      return "text-2xl font-bold text-zinc-100 dark:text-zinc-100 leading-tight h-[1.25em] m-0 p-0";
     }
     if (text.startsWith("### ")) {
-      return "text-xl font-bold text-zinc-100 dark:text-zinc-100 my-1";
+      return "text-xl font-bold text-zinc-100 dark:text-zinc-100 leading-tight h-[1.25em] m-0 p-0";
     }
     if (text.startsWith("#### ")) {
-      return "text-lg font-bold text-zinc-100 dark:text-zinc-100 my-1";
+      return "text-lg font-bold text-zinc-100 dark:text-zinc-100 leading-tight h-[1.25em] m-0 p-0";
     }
     if (text.startsWith("> ")) {
-      return "border-l-4 border-zinc-500 pl-4 italic text-zinc-400 my-1";
+      return "border-l-4 border-zinc-500 pl-4 italic text-zinc-400 leading-relaxed h-[1.625em] m-0 p-0";
     }
-    return "text-zinc-200 dark:text-zinc-200 my-1";
+    return "text-zinc-200 dark:text-zinc-200 leading-relaxed h-[1.625em] m-0 p-0";
   };
 
   return (
     <div
       ref={containerRef}
       onClick={handleContainerClick}
-      className={`flex-1 overflow-y-auto w-full px-3 py-2 space-y-1 focus:outline-none min-h-[200px] ${className}`}
+      className={`flex-1 overflow-y-auto w-full px-3 py-2 space-y-2.5 leading-relaxed focus:outline-none min-h-[200px] ${className}`}
     >
       {lines.map((line, index) => {
-        const { isChecklist, checked, marker, content } = parseChecklistLine(line);
+        const { isChecklist, checked, marker, content } =
+          parseChecklistLine(line);
         return (
           <div key={index} className="w-full relative min-h-[1.5rem]">
             {focusedLineIndex === index ? (
@@ -629,20 +629,28 @@ export default function LivePreviewEditor({
                     onChange={() => handleCheckboxToggle(index)}
                     className="custom-checkbox"
                   />
-                  <AutoSizeTextarea
+                  <input
                     ref={(el) => {
                       textareaRefs.current[index] = el;
                     }}
                     value={content}
-                    onChange={(e) => handleChecklistLineChange(e, index, marker)}
-                    onKeyDown={(e) => handleChecklistKeyDown(e, index, marker, content)}
-                    onPaste={(e) => handleChecklistPaste(e, index, marker, content)}
-                    placeholder={index === 0 && lines.length === 1 ? placeholder : ""}
-                    className={getTextareaClassName(content)}
+                    onChange={(e) =>
+                      handleChecklistLineChange(e, index, marker)
+                    }
+                    onKeyDown={(e) =>
+                      handleChecklistKeyDown(e, index, marker, content)
+                    }
+                    onPaste={(e) =>
+                      handleChecklistPaste(e, index, marker, content)
+                    }
+                    placeholder={
+                      index === 0 && lines.length === 1 ? placeholder : ""
+                    }
+                    className={`${BASE_INPUT_CLASS} ${getTextareaClassName(content)}`}
                   />
                 </div>
               ) : (
-                <AutoSizeTextarea
+                <input
                   ref={(el) => {
                     textareaRefs.current[index] = el;
                   }}
@@ -650,8 +658,10 @@ export default function LivePreviewEditor({
                   onChange={(e) => handleLineChange(e, index)}
                   onKeyDown={(e) => handleKeyDown(e, index)}
                   onPaste={(e) => handlePaste(e, index)}
-                  placeholder={index === 0 && lines.length === 1 ? placeholder : ""}
-                  className={getTextareaClassName(line)}
+                  placeholder={
+                    index === 0 && lines.length === 1 ? placeholder : ""
+                  }
+                  className={`${BASE_INPUT_CLASS} ${getTextareaClassName(line)}`}
                 />
               )
             ) : (
