@@ -8,6 +8,7 @@ interface ButtonProps {
   variant?: "custom" | "default" | "danger" | "success";
   size?: "sm" | "md";
   disabled?: boolean;
+  type?: "button" | "submit" | "reset";
 }
 
 export default function Button({
@@ -18,6 +19,7 @@ export default function Button({
   variant = "default",
   size = "md",
   disabled = false,
+  type = "button",
 }: ButtonProps) {
   const baseClasses =
     "rounded-lg font-medium transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md";
@@ -39,6 +41,7 @@ export default function Button({
 
   return (
     <button
+      type={type}
       className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
       onClick={onClick}
       title={title}

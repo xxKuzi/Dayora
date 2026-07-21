@@ -54,6 +54,12 @@ export default function Editor({
     localStorage.setItem("dayora_editor_mode", mode);
   };
 
+  const [hasTyped, setHasTyped] = useState(false);
+
+  useEffect(() => {
+    setHasTyped(false);
+  }, [activeNote?.id]);
+
   if (!activeNote) {
     return (
       <main className="flex-1 h-full p-4 flex flex-col min-w-0">
@@ -61,12 +67,6 @@ export default function Editor({
       </main>
     );
   }
-
-  const [hasTyped, setHasTyped] = useState(false);
-
-  useEffect(() => {
-    setHasTyped(false);
-  }, [activeNote?.id]);
 
   const handleTitleChange = (title: string) => {
     setHasTyped(true);

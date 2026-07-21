@@ -10,16 +10,30 @@ import type {
   UserSettings,
   CookiePreference,
 } from "./types";
-import { Button, CookieBanner, FolderModal } from "./components";
+import { Button, CookieBanner, FolderModal, AuthModal } from "./components";
 import type { FolderModalType } from "./components/FolderModal";
 import { nid, fid, deriveTitleFromBody, load, save } from "./utils";
 import { Sidebar, NotesList } from "./parts";
 import { Editor, DailyPlan as DailyPlanComponent, Settings } from "./pages";
 import { initializeAI, getAIService } from "./services/ai";
 
+import { auth, db } from "./services/firebase";
+import { signOut, onAuthStateChanged } from "firebase/auth";
+import type { User } from "firebase/auth";
+import { doc, getDoc, setDoc, writeBatch, collection, getDocs } from "firebase/firestore";
+
 export default function App() {
   // ---- State ----
   const initial = load() as AppState | null;
+
+  const [user, setUser] = useState<User | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
+  const [isSynced, setIsSynced] = useState<boolean>(false);
+
+  const lastSyncedFoldersRef = useRef<Folder[]>([]);
+  const lastSyncedNotesRef = useRef<Note[]>([]);
+  const lastSyncedPlansRef = useRef<DailyPlan[]>([]);
+  const lastSyncedSettingsRef = useRef<UserSettings | null>(null);
 
   const [folders, setFolders] = useState<Folder[]>(
     initial?.folders ?? [
@@ -243,6 +257,250 @@ export default function App() {
     [folders],
   );
 
+  // ---- Firebase Auth & Sync Effects ----
+  async function handleSignOut() {
+    if (!auth) return;
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error("Sign out failed:", err);
+    }
+  }
+
+  useEffect(() => {
+    if (!auth) return;
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        setIsSynced(false);
+        try {
+          const userDocRef = doc(db!, "users", firebaseUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
+
+          const foldersSnap = await getDocs(collection(db!, "users", firebaseUser.uid, "folders"));
+          const notesSnap = await getDocs(collection(db!, "users", firebaseUser.uid, "notes"));
+          const plansSnap = await getDocs(collection(db!, "users", firebaseUser.uid, "dailyPlans"));
+
+          const dbSettings = userDocSnap.exists() ? userDocSnap.data().settings : null;
+          const dbFolders = foldersSnap.docs.map((doc) => doc.data() as Folder);
+          const dbNotes = notesSnap.docs.map((doc) => doc.data() as Note);
+          const dbPlans = plansSnap.docs.map((doc) => doc.data() as DailyPlan);
+
+          const hasFirestoreData = dbFolders.length > 0 || dbNotes.length > 0 || !!dbSettings;
+
+          if (hasFirestoreData) {
+            if (dbSettings) setSettings(dbSettings);
+            if (dbFolders.length > 0) setFolders(dbFolders);
+            if (dbNotes.length > 0) {
+              setNotes(dbNotes);
+              setActiveNoteId(dbNotes[0]?.id || null);
+            }
+            if (dbPlans.length > 0) setDailyPlans(dbPlans);
+          } else {
+            // First sign in migration: Upload local data to Firestore
+            const batch = writeBatch(db!);
+            batch.set(userDocRef, { settings });
+
+            folders.forEach((f) => {
+              batch.set(doc(db!, "users", firebaseUser.uid, "folders", f.id), f);
+            });
+            notes.forEach((n) => {
+              batch.set(doc(db!, "users", firebaseUser.uid, "notes", n.id), n);
+            });
+            dailyPlans.forEach((plan) => {
+              batch.set(doc(db!, "users", firebaseUser.uid, "dailyPlans", plan.id), plan);
+            });
+
+            await batch.commit();
+          }
+
+          // Clear local storage completely on sign-in
+          localStorage.removeItem("dayora_v1");
+          localStorage.removeItem("dayora_dark_mode");
+          localStorage.removeItem("dayora_comfortable_typing");
+
+          lastSyncedFoldersRef.current = hasFirestoreData ? dbFolders : folders;
+          lastSyncedNotesRef.current = hasFirestoreData ? dbNotes : notes;
+          lastSyncedPlansRef.current = hasFirestoreData ? dbPlans : dailyPlans;
+          lastSyncedSettingsRef.current = hasFirestoreData ? dbSettings || settings : settings;
+
+          setIsSynced(true);
+        } catch (error) {
+          console.error("Error loading user data from Firestore:", error);
+          setIsSynced(true);
+        }
+      } else {
+        setIsSynced(false);
+        const localData = load() as AppState | null;
+        if (localData) {
+          setFolders(localData.folders);
+          setNotes(localData.notes);
+          setActiveFolderId(localData.activeFolderId);
+          setActiveNoteId(localData.activeNoteId);
+          setDailyPlans(localData.dailyPlans);
+          setSettings(localData.settings);
+        } else {
+          setFolders([
+            { id: "f-default", name: "Notes" },
+            { id: "f-ideas", name: "Ideas" },
+            { id: "f-trash", name: "Trash" },
+          ]);
+          setNotes([
+            {
+              id: nid(),
+              title: "Welcome",
+              body: "This is your first note.\nType away!",
+              pinned: true,
+              updatedAt: Date.now(),
+              folderId: "f-default",
+            },
+            {
+              id: nid(),
+              title: "Todo",
+              body: "- Try dark mode (top right)\n- Press Ctrl/Cmd+N for new note\n- Search notes in the middle pane\n- Delete moves to Trash",
+              pinned: false,
+              updatedAt: Date.now() - 10000,
+              folderId: "f-default",
+            },
+          ]);
+          setActiveFolderId("f-default");
+          setActiveNoteId(null);
+          setDailyPlans([]);
+          setSettings({
+            userType: "worker",
+            mealTimes: {
+              breakfast: "08:00",
+              lunch: "12:30",
+              dinner: "19:00",
+            },
+            workHours: {
+              start: "09:00",
+              end: "17:00",
+            },
+            habits: [],
+            goals: [],
+          });
+        }
+      }
+    });
+    return () => unsub();
+  }, [auth]);
+
+  // Sync folders to Firestore
+  useEffect(() => {
+    const database = db;
+    if (!user || !isSynced || !database) return;
+    const currentFolders = folders;
+    const lastFolders = lastSyncedFoldersRef.current;
+
+    const toWrite = currentFolders.filter(
+      (f) => !lastFolders.some((lf) => lf.id === f.id && lf.name === f.name),
+    );
+    const toDelete = lastFolders.filter(
+      (lf) => !currentFolders.some((f) => f.id === lf.id),
+    );
+
+    lastSyncedFoldersRef.current = currentFolders;
+
+    if (toWrite.length > 0 || toDelete.length > 0) {
+      const batch = writeBatch(database);
+      toWrite.forEach((f) => {
+        batch.set(doc(database, "users", user.uid, "folders", f.id), f);
+      });
+      toDelete.forEach((lf) => {
+        batch.delete(doc(database, "users", user.uid, "folders", lf.id));
+      });
+      batch.commit().catch((err) => console.error("Error syncing folders:", err));
+    }
+  }, [folders, user, isSynced]);
+
+  // Sync notes to Firestore
+  useEffect(() => {
+    const database = db;
+    if (!user || !isSynced || !database) return;
+    const currentNotes = notes;
+    const lastNotes = lastSyncedNotesRef.current;
+
+    const toWrite = currentNotes.filter((n) => {
+      const prev = lastNotes.find((ln) => ln.id === n.id);
+      if (!prev) return true;
+      return (
+        prev.title !== n.title ||
+        prev.body !== n.body ||
+        prev.pinned !== n.pinned ||
+        prev.trashed !== n.trashed ||
+        prev.folderId !== n.folderId ||
+        prev.updatedAt !== n.updatedAt
+      );
+    });
+
+    const toDelete = lastNotes.filter(
+      (ln) => !currentNotes.some((n) => n.id === ln.id),
+    );
+
+    lastSyncedNotesRef.current = currentNotes;
+
+    if (toWrite.length > 0 || toDelete.length > 0) {
+      const batch = writeBatch(database);
+      toWrite.forEach((n) => {
+        batch.set(doc(database, "users", user.uid, "notes", n.id), n);
+      });
+      toDelete.forEach((ln) => {
+        batch.delete(doc(database, "users", user.uid, "notes", ln.id));
+      });
+      batch.commit().catch((err) => console.error("Error syncing notes:", err));
+    }
+  }, [notes, user, isSynced]);
+
+  // Sync daily plans to Firestore
+  useEffect(() => {
+    const database = db;
+    if (!user || !isSynced || !database) return;
+    const currentPlans = dailyPlans;
+    const lastPlans = lastSyncedPlansRef.current;
+
+    const toWrite = currentPlans.filter((p) => {
+      const prev = lastPlans.find((lp) => lp.id === p.id);
+      if (!prev) return true;
+      return (
+        prev.updatedAt !== p.updatedAt ||
+        prev.date !== p.date ||
+        JSON.stringify(prev.tasks) !== JSON.stringify(p.tasks)
+      );
+    });
+
+    const toDelete = lastPlans.filter(
+      (lp) => !currentPlans.some((p) => p.id === lp.id),
+    );
+
+    lastSyncedPlansRef.current = currentPlans;
+
+    if (toWrite.length > 0 || toDelete.length > 0) {
+      const batch = writeBatch(database);
+      toWrite.forEach((p) => {
+        batch.set(doc(database, "users", user.uid, "dailyPlans", p.id), p);
+      });
+      toDelete.forEach((lp) => {
+        batch.delete(doc(database, "users", user.uid, "dailyPlans", lp.id));
+      });
+      batch.commit().catch((err) => console.error("Error syncing dailyPlans:", err));
+    }
+  }, [dailyPlans, user, isSynced]);
+
+  // Sync settings to Firestore
+  useEffect(() => {
+    const database = db;
+    if (!user || !isSynced || !database) return;
+    const currentSettings = settings;
+    const lastSettings = lastSyncedSettingsRef.current;
+
+    if (JSON.stringify(currentSettings) !== JSON.stringify(lastSettings)) {
+      lastSyncedSettingsRef.current = currentSettings;
+      setDoc(doc(database, "users", user.uid), { settings: currentSettings }, { merge: true })
+        .catch((err) => console.error("Error syncing settings:", err));
+    }
+  }, [settings, user, isSynced]);
+
   // Active note + local editor drafts (for instant typing)
   const activeNote = useMemo<Note | null>(
     () => notes.find((n) => n.id === activeNoteId) ?? null,
@@ -283,7 +541,7 @@ export default function App() {
   // Debounce localStorage writes (300ms) to avoid blocking main thread
   const persistTimer = useRef<number | null>(null);
   useEffect(() => {
-    if (!shouldPersistData) return; // Don't save if cookies not accepted
+    if (!shouldPersistData || user) return; // Don't save if cookies not accepted or user is logged in
 
     if (persistTimer.current) window.clearTimeout(persistTimer.current);
     persistTimer.current = window.setTimeout(() => {
@@ -313,6 +571,7 @@ export default function App() {
     settings,
     cookiePreference,
     shouldPersistData,
+    user,
   ]);
 
   // ---- Derived lists ----
@@ -637,6 +896,9 @@ export default function App() {
               trashId={trashId}
               activeView={activeView}
               onViewChange={setActiveView}
+              user={user}
+              onSignInClick={() => setAuthModalOpen(true)}
+              onSignOutClick={handleSignOut}
             />
           </div>
         )}
@@ -750,6 +1012,12 @@ export default function App() {
         onConfirmNew={handleConfirmNewFolder}
         onConfirmRename={handleConfirmRenameFolder}
         onConfirmDelete={handleConfirmDeleteFolder}
+      />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
       />
     </div>
   );
