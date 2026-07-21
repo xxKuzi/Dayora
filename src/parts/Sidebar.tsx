@@ -48,7 +48,7 @@ export default function Sidebar({
             onClick={() => onViewChange(view.id as any)}
             className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-all ${
               activeView === view.id
-                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md dark:bg-none dark:bg-zinc-100 dark:text-zinc-900"
+                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md dark:bg-none dark:bg-blue-600 dark:text-white"
                 : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
             }`}
           >
