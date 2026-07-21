@@ -157,7 +157,7 @@ export default function Sidebar({
       {activeView === "daily-plan" && (
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="text-4xl mb-2">📅</div>
-          <p className="text-sm text-zinc-200 dark:text-zinc-200">
+          <p className="text-sm text-zinc-600 dark:text-zinc-200">
             Plan your day with AI assistance
           </p>
         </div>
