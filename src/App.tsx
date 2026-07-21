@@ -56,6 +56,10 @@ export default function App() {
   const [query, setQuery] = useState<string>(initial?.query ?? "");
   const deferredQuery = useDeferredValue(query);
   const [darkMode, setDarkMode] = useState<DarkMode>(() => {
+    const saved = localStorage.getItem("dayora_dark_mode");
+    if (saved === "light" || saved === "dark" || saved === "auto") {
+      return saved as DarkMode;
+    }
     // Migrate from old boolean dark mode to new DarkMode type
     if (initial?.darkMode) return initial.darkMode;
     if (initial && "dark" in initial && typeof initial.dark === "boolean") {
@@ -148,6 +152,13 @@ export default function App() {
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
+
+  // Save dark mode preference to local storage when it changes
+  useEffect(() => {
+    if (cookiePreference !== "declined") {
+      localStorage.setItem("dayora_dark_mode", darkMode);
+    }
+  }, [darkMode, cookiePreference]);
 
   // Keyboard shortcuts for toggling sections
   useEffect(() => {
@@ -506,6 +517,7 @@ export default function App() {
     setCookiePreference("declined");
     // Clear existing data from localStorage when declining
     localStorage.removeItem("dayora_v1");
+    localStorage.removeItem("dayora_dark_mode");
   }
 
   return (
