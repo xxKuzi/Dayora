@@ -88,7 +88,10 @@ export default function App() {
   );
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
   const [notesListVisible, setNotesListVisible] = useState<boolean>(true);
-  const [comfortableTyping, setComfortableTyping] = useState<boolean>(false);
+  const [comfortableTyping, setComfortableTyping] = useState<boolean>(() => {
+    const saved = localStorage.getItem("dayora_comfortable_typing");
+    return saved === null ? true : saved === "true";
+  });
   const [activeView, setActiveView] = useState<
     "notes" | "daily-plan" | "settings"
   >("notes");
@@ -175,6 +178,13 @@ export default function App() {
       localStorage.setItem("dayora_dark_mode", darkMode);
     }
   }, [darkMode, cookiePreference]);
+
+  // Save comfortable typing preference to local storage when it changes
+  useEffect(() => {
+    if (cookiePreference !== "declined") {
+      localStorage.setItem("dayora_comfortable_typing", String(comfortableTyping));
+    }
+  }, [comfortableTyping, cookiePreference]);
 
   // Keyboard shortcuts for toggling sections
   useEffect(() => {
@@ -541,63 +551,66 @@ export default function App() {
     // Clear existing data from localStorage when declining
     localStorage.removeItem("dayora_v1");
     localStorage.removeItem("dayora_dark_mode");
+    localStorage.removeItem("dayora_comfortable_typing");
   }
 
   return (
     <div className={"w-full h-screen flex " + (isDark ? "dark" : "")}>
       {/* Fixed Toggle Buttons - Top Right Corner */}
-      <div className="fixed top-2 right-4 z-50 flex items-center gap-2">
-        {(!sidebarVisible || !notesListVisible) && (
-          /* Comfortable Typing Button - only when panels are hidden */
-          <Button
-            onClick={() => setComfortableTyping(!comfortableTyping)}
-            title={`${
-              comfortableTyping ? "Disable" : "Enable"
-            } Comfortable Typing`}
-            size="sm"
-            className="!bg-gray-600 hover:!bg-gray-700 !text-white !border-gray-500 hover:!scale-100 !rounded-full !w-8 !h-8 !p-0 flex items-center justify-center"
-          >
-            <div className="relative w-4 h-4">
-              {/* Outer circle */}
-              <div className="absolute inset-0 rounded-full border-2 border-white"></div>
-              {/* Inner fill - only visible when comfortable typing is active */}
-              {comfortableTyping && (
-                <div className="absolute inset-0.5 rounded-full bg-white"></div>
-              )}
-            </div>
-          </Button>
-        )}
-        <Button
-          onClick={handleToggleAllPanels}
-          title={`${
-            sidebarVisible || notesListVisible ? "Hide" : "Show"
-          } All Panels`}
-          size="sm"
-          className="!bg-blue-600 hover:!bg-blue-700 !text-white !border-blue-500 hover:!scale-100"
-        >
-          {sidebarVisible || notesListVisible ? "◀◀" : "▶▶"}
-        </Button>
-        {(sidebarVisible || notesListVisible) && (
-          <>
+      {(activeView !== "notes" || !activeNote) && (
+        <div className="fixed top-2 right-4 z-50 flex items-center gap-2">
+          {(!sidebarVisible || !notesListVisible) && (
+            /* Comfortable Typing Button - only when panels are hidden */
             <Button
-              onClick={() => setSidebarVisible(!sidebarVisible)}
-              title={`${sidebarVisible ? "Hide" : "Show"} Sidebar (Ctrl/Cmd+B)`}
-              size="sm"
-            >
-              {sidebarVisible ? "◀" : "▶"}
-            </Button>
-            <Button
-              onClick={() => setNotesListVisible(!notesListVisible)}
+              onClick={() => setComfortableTyping(!comfortableTyping)}
               title={`${
-                notesListVisible ? "Hide" : "Show"
-              } Notes List (Ctrl/Cmd+N)`}
+                comfortableTyping ? "Disable" : "Enable"
+              } Comfortable Typing`}
               size="sm"
+              className="!bg-gray-600 hover:!bg-gray-700 !text-white !border-gray-500 hover:!scale-100 !rounded-full !w-8 !h-8 !p-0 flex items-center justify-center"
             >
-              {notesListVisible ? "◀" : "▶"}
+              <div className="relative w-4 h-4">
+                {/* Outer circle */}
+                <div className="absolute inset-0 rounded-full border-2 border-white"></div>
+                {/* Inner fill - only visible when comfortable typing is active */}
+                {comfortableTyping && (
+                  <div className="absolute inset-0.5 rounded-full bg-white"></div>
+                )}
+              </div>
             </Button>
-          </>
-        )}
-      </div>
+          )}
+          <Button
+            onClick={handleToggleAllPanels}
+            title={`${
+              sidebarVisible || notesListVisible ? "Hide" : "Show"
+            } All Panels`}
+            size="sm"
+            className="!bg-blue-600 hover:!bg-blue-700 !text-white !border-blue-500 hover:!scale-100"
+          >
+            {sidebarVisible || notesListVisible ? "◀◀" : "▶▶"}
+          </Button>
+          {(sidebarVisible || notesListVisible) && (
+            <>
+              <Button
+                onClick={() => setSidebarVisible(!sidebarVisible)}
+                title={`${sidebarVisible ? "Hide" : "Show"} Sidebar (Ctrl/Cmd+B)`}
+                size="sm"
+              >
+                {sidebarVisible ? "◀" : "▶"}
+              </Button>
+              <Button
+                onClick={() => setNotesListVisible(!notesListVisible)}
+                title={`${
+                  notesListVisible ? "Hide" : "Show"
+                } Notes List (Ctrl/Cmd+N)`}
+                size="sm"
+              >
+                {notesListVisible ? "◀" : "▶"}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="w-full h-full flex text-zinc-900 dark:text-zinc-100">
         {sidebarVisible && (
@@ -668,6 +681,13 @@ export default function App() {
                 onTitleChange={setDraftTitle}
                 onBodyChange={setDraftBody}
                 showLastEdited={sidebarVisible && notesListVisible}
+                sidebarVisible={sidebarVisible}
+                onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}
+                notesListVisible={notesListVisible}
+                onToggleNotesList={() => setNotesListVisible(!notesListVisible)}
+                comfortableTyping={comfortableTyping}
+                onToggleComfortableTyping={() => setComfortableTyping(!comfortableTyping)}
+                onToggleAllPanels={handleToggleAllPanels}
               />
             </>
           )}

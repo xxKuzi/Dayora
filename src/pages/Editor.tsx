@@ -10,6 +10,13 @@ interface EditorProps {
   onTitleChange: (title: string) => void;
   onBodyChange: (body: string) => void;
   showLastEdited?: boolean;
+  sidebarVisible?: boolean;
+  onToggleSidebar?: () => void;
+  notesListVisible?: boolean;
+  onToggleNotesList?: () => void;
+  comfortableTyping?: boolean;
+  onToggleComfortableTyping?: () => void;
+  onToggleAllPanels?: () => void;
 }
 
 export default function Editor({
@@ -19,6 +26,13 @@ export default function Editor({
   onTitleChange,
   onBodyChange,
   showLastEdited = true,
+  sidebarVisible = true,
+  onToggleSidebar,
+  notesListVisible = true,
+  onToggleNotesList,
+  comfortableTyping = false,
+  onToggleComfortableTyping,
+  onToggleAllPanels,
 }: EditorProps) {
   type EditorMode = "markdown" | "live" | "preview";
 
@@ -67,7 +81,119 @@ export default function Editor({
   return (
     <main className="no-transition flex-1 h-full px-4 py-6 flex flex-col min-w-0 overflow-hidden">
       <div className="flex items-center gap-2 justify-between shrink-0">
-        <div className="flex items-center gap-2 w-full bg-zinc-200/80 dark:bg-zinc-800 rounded-5xl pr-4">
+        <div className="flex items-center gap-2 w-full bg-zinc-200/80 dark:bg-zinc-800 rounded-5xl pr-4 pl-2">
+          {/* Panel Control Buttons Group */}
+          <div className="flex items-center gap-1 bg-zinc-300/40 dark:bg-zinc-700/30 p-0.5 rounded-full mr-1">
+            {onToggleSidebar && (
+              <button
+                onClick={onToggleSidebar}
+                title={`${sidebarVisible ? "Hide" : "Show"} Sidebar (Ctrl/Cmd+B)`}
+                className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 active:scale-95 ${
+                  sidebarVisible
+                    ? "bg-zinc-100 dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-300/50 dark:hover:bg-zinc-700/40"
+                }`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-4.5 h-4.5"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M9 3v18" />
+                </svg>
+              </button>
+            )}
+
+            {onToggleNotesList && (
+              <button
+                onClick={onToggleNotesList}
+                title={`${notesListVisible ? "Hide" : "Show"} Notes List (Ctrl/Cmd+N)`}
+                className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 active:scale-95 ${
+                  notesListVisible
+                    ? "bg-zinc-100 dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-300/50 dark:hover:bg-zinc-700/40"
+                }`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-4.5 h-4.5"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M9 3v18" />
+                  <path d="M15 3v18" />
+                </svg>
+              </button>
+            )}
+
+            {onToggleAllPanels && (
+              <button
+                onClick={onToggleAllPanels}
+                title={`${sidebarVisible || notesListVisible ? "Hide" : "Show"} All Panels`}
+                className="flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 active:scale-95 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-300/50 dark:hover:bg-zinc-700/40"
+              >
+                {sidebarVisible || notesListVisible ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-4.5 h-4.5"
+                  >
+                    <path d="m18 16-4-4 4-4" />
+                    <path d="m12 16-4-4 4-4" />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-4.5 h-4.5"
+                  >
+                    <path d="m6 8 4 4-4 4" />
+                    <path d="m12 8 4 4-4 4" />
+                  </svg>
+                )}
+              </button>
+            )}
+
+            {onToggleComfortableTyping && (!sidebarVisible || !notesListVisible) && (
+              <button
+                onClick={onToggleComfortableTyping}
+                title={`${comfortableTyping ? "Disable" : "Enable"} Comfortable Typing`}
+                className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 active:scale-95 ${
+                  comfortableTyping
+                    ? "bg-zinc-100 dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-300/50 dark:hover:bg-zinc-700/40"
+                }`}
+              >
+                <div className="relative w-3.5 h-3.5">
+                  <div className="absolute inset-0 rounded-full border-2 border-current"></div>
+                  {comfortableTyping && (
+                    <div className="absolute inset-0.5 rounded-full bg-current"></div>
+                  )}
+                </div>
+              </button>
+            )}
+          </div>
           <Input
             value={draftTitle}
             onChange={(e) => handleTitleChange(e.target.value)}
