@@ -12,6 +12,7 @@ interface EditorProps {
   onDeleteNote: (note: Note | null) => void;
   onRestoreNote: (note: Note | null) => void;
   onMoveNote: (note: Note, folderId: string) => void;
+  showLastEdited?: boolean;
 }
 
 export default function Editor({
@@ -25,18 +26,19 @@ export default function Editor({
   onDeleteNote,
   onRestoreNote,
   onMoveNote,
+  showLastEdited = true,
 }: EditorProps) {
   if (!activeNote) {
     return (
-      <main className="flex-1 p-4 flex flex-col min-w-0">
+      <main className="flex-1 h-full p-4 flex flex-col min-w-0">
         <div className="m-auto opacity-60">Select or create a note</div>
       </main>
     );
   }
 
   return (
-    <main className="flex-1 px-4 py-8 flex flex-col min-w-0">
-      <div className="flex items-center gap-2 justify-between">
+    <main className="flex-1 h-full px-4 py-6 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex items-center gap-2 justify-between shrink-0">
         <div className="flex items-center gap-2 w-full bg-zinc-200/80 dark:bg-zinc-800 rounded-5xl">
           <Input
             value={draftTitle}
@@ -69,7 +71,7 @@ export default function Editor({
                     ...folders
                       .filter(
                         (f) =>
-                          f.name !== "Trash" && f.id !== activeNote.folderId
+                          f.name !== "Trash" && f.id !== activeNote.folderId,
                       )
                       .map((folder) => ({
                         label: `Move to ${folder.name}`,
@@ -93,12 +95,14 @@ export default function Editor({
         value={draftBody}
         onChange={(e) => onBodyChange(e.target.value)}
         placeholder="Start typing…"
-        className="flex-1 mt-3"
+        className="flex-1 mt-3 h-full resize-none"
       />
 
-      <div className="pt-2 text-xs opacity-60">
-        Last edited {new Date(activeNote.updatedAt).toLocaleString()}
-      </div>
+      {showLastEdited && (
+        <div className="pt-2 text-xs opacity-60 shrink-0">
+          Last edited {new Date(activeNote.updatedAt).toLocaleString()}
+        </div>
+      )}
     </main>
   );
 }

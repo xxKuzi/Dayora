@@ -24,7 +24,7 @@ export default function NotesList({
   darkMode,
 }: NotesListProps) {
   return (
-    <section className="w-80 h-screen border-r border-white/20 dark:border-zinc-700/50 p-4 flex flex-col bg-white/5 dark:bg-zinc-900/70 backdrop-blur-sm">
+    <section className="w-80 h-screen border-r border-white/20 dark:border-zinc-700/50 p-4 flex flex-col bg-white/35 dark:bg-zinc-900/70 backdrop-blur-md">
       <div className="flex items-center gap-2">
         <Input
           value={query}
@@ -48,19 +48,21 @@ export default function NotesList({
         {notes.length === 0 && (
           <div className="text-sm opacity-60 p-4">No notes</div>
         )}
-        <ul className="space-y-1">
+        <ul className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
           {notes.map((n) => (
             <li key={n.id}>
               <button
                 onClick={() => onNoteSelect(n.id)}
-                className={`w-full text-left p-2 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 ${
-                  activeNoteId === n.id ? "bg-zinc-200 dark:bg-zinc-800" : ""
+                className={`w-full text-left p-2 rounded hover:border-white dark:hover:border-zinc-400 border-2 dark:text-zinc-100 border-transparent ${
+                  activeNoteId === n.id
+                    ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-800"
+                    : "text-white"
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
                     {n.pinned && <span title="Pinned">📌</span>}
-                    <span className="font-medium truncate">
+                    <span className="font-medium truncate text-md">
                       {n.title || "(Untitled)"}
                     </span>
                   </div>

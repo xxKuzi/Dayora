@@ -28,7 +28,7 @@ export default function Sidebar({
   onViewChange,
 }: SidebarProps) {
   return (
-    <aside className="w-60 h-full border-r border-white/20 dark:border-zinc-700/50 p-4 flex flex-col gap-4 bg-white/10 dark:bg-magenta-600 backdrop-blur-md">
+    <aside className="w-60 h-full border-r border-zinc-200/80 dark:border-zinc-800/80 p-4 flex flex-col gap-4 bg-zinc-100/90 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
       {/* Navigation */}
       <div className="space-y-1">
         {[
@@ -41,8 +41,8 @@ export default function Sidebar({
             onClick={() => onViewChange(view.id as any)}
             className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-all ${
               activeView === view.id
-                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md"
-                : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md dark:bg-none dark:bg-zinc-100 dark:text-zinc-900"
+                : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
             }`}
           >
             {view.label}
@@ -53,11 +53,10 @@ export default function Sidebar({
       {/* Notes-specific content */}
       {activeView === "notes" && (
         <>
-          <br></br>
-          <div className="w-full h-0.5 bg-zinc-200/30 rounded-full" />
+          <div className="w-full h-px bg-zinc-200 dark:bg-zinc-800 my-1" />
 
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold tracking-wide uppercase opacity-70">
+            <h2 className="text-xs font-semibold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
               Folders
             </h2>
             <Button onClick={onNewFolder} size="sm">
@@ -70,8 +69,10 @@ export default function Sidebar({
               <button
                 key={f.id}
                 onClick={() => onFolderSelect(f.id)}
-                className={`w-full text-left px-2 py-2 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 ${
-                  activeFolderId === f.id ? "bg-zinc-200 dark:bg-zinc-800" : ""
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                  activeFolderId === f.id
+                    ? "bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-900 dark:text-zinc-100 font-medium"
+                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
                 }`}
               >
                 <div className="flex items-center justify-between">
