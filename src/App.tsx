@@ -247,7 +247,7 @@ export default function App() {
     const h = window.setTimeout(() => {
       const title =
         (draftTitle && draftTitle.trim()) || deriveTitleFromBody(draftBody);
-      setNotesWithTransition((ns) =>
+      setNotes((ns) =>
         ns.map((n) =>
           n.id === activeNote.id
             ? { ...n, title, body: draftBody, updatedAt: Date.now() }
