@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useDeferredValue } from "react";
+import { flushSync } from "react-dom";
 
 import type {
   Note,
@@ -47,6 +48,21 @@ export default function App() {
       },
     ],
   );
+
+  const setNotesWithTransition = (
+    update: Note[] | ((prev: Note[]) => Note[])
+  ) => {
+    if (document.startViewTransition) {
+      document.startViewTransition(() => {
+        flushSync(() => {
+          setNotes(update);
+        });
+      });
+    } else {
+      setNotes(update);
+    }
+  };
+
   const [activeFolderId, setActiveFolderId] = useState<string>(
     initial?.activeFolderId ?? folders[0]?.id ?? "f-default",
   );
@@ -222,10 +238,16 @@ export default function App() {
   // Debounce persisting drafts into notes (200ms)
   useEffect(() => {
     if (!activeNote) return;
+
+    // Only save and update updatedAt if there are actual changes
+    if (draftTitle === activeNote.title && draftBody === activeNote.body) {
+      return;
+    }
+
     const h = window.setTimeout(() => {
       const title =
         (draftTitle && draftTitle.trim()) || deriveTitleFromBody(draftBody);
-      setNotes((ns) =>
+      setNotesWithTransition((ns) =>
         ns.map((n) =>
           n.id === activeNote.id
             ? { ...n, title, body: draftBody, updatedAt: Date.now() }
@@ -352,7 +374,7 @@ export default function App() {
     const updated = notes.map((n) =>
       n.folderId === id ? { ...n, trashed: true, updatedAt: Date.now() } : n,
     );
-    setNotes(updated);
+    setNotesWithTransition(updated);
     // Remove folder
     setFolders((fs) => fs.filter((f) => f.id !== id));
     if (activeFolderId === id) setActiveFolderId(trashId);
@@ -376,7 +398,7 @@ export default function App() {
       trashed: false,
       folderId: targetFolderId,
     };
-    setNotes((ns) => [newN, ...ns]);
+    setNotesWithTransition((ns) => [newN, ...ns]);
     setActiveNoteId(newN.id);
     if (activeFolderId === trashId) setActiveFolderId(targetFolderId);
     // Reset drafts to keep editor fast
@@ -388,12 +410,12 @@ export default function App() {
     if (!note) return;
     if (note.trashed) {
       // permanent delete
-      setNotes((ns) => ns.filter((n) => n.id !== note.id));
+      setNotesWithTransition((ns) => ns.filter((n) => n.id !== note.id));
       setActiveNoteId(null);
       return;
     }
     // move to trash
-    setNotes((ns) =>
+    setNotesWithTransition((ns) =>
       ns.map((n) =>
         n.id === note.id ? { ...n, trashed: true, updatedAt: Date.now() } : n,
       ),
@@ -403,7 +425,7 @@ export default function App() {
 
   function handleRestoreNote(note: Note | null) {
     if (!note) return;
-    setNotes((ns) =>
+    setNotesWithTransition((ns) =>
       ns.map((n) =>
         n.id === note.id ? { ...n, trashed: false, updatedAt: Date.now() } : n,
       ),
@@ -411,7 +433,7 @@ export default function App() {
   }
 
   function togglePin(note: Note) {
-    setNotes((ns) =>
+    setNotesWithTransition((ns) =>
       ns.map((n) =>
         n.id === note.id
           ? { ...n, pinned: !n.pinned, updatedAt: Date.now() }
@@ -421,7 +443,8 @@ export default function App() {
   }
 
   function handleMoveNote(note: Note, folderId: string) {
-    setNotes((ns) =>
+    // Only transition if the folder is changing
+    setNotesWithTransition((ns) =>
       ns.map((n) =>
         n.id === note.id ? { ...n, folderId, updatedAt: Date.now() } : n,
       ),

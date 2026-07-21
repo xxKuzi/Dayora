@@ -99,7 +99,13 @@ export default function NotesList({
         )}
         <ul className="space-y-1.5">
           {notes.map((n) => (
-            <li key={n.id}>
+            <li
+              key={n.id}
+              style={{
+                viewTransitionName: `note-${n.id}`,
+                viewTransitionClass: "note-item",
+              } as React.CSSProperties}
+            >
               <div
                 onClick={() => onNoteSelect(n.id)}
                 className={`group relative w-full text-left p-2.5 rounded-lg border transition-all cursor-pointer ${
