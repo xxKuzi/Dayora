@@ -11,13 +11,12 @@ import type {
 } from "./types";
 import { Button } from "./components";
 import { nid, fid, deriveTitleFromBody, load, save } from "./utils";
+import { Sidebar, NotesList } from "./parts";
 import {
-  Sidebar,
-  NotesList,
   Editor,
   DailyPlan as DailyPlanComponent,
   Settings,
-} from "./parts";
+} from "./pages";
 import { CookieBanner } from "./components";
 import { initializeAI, getAIService } from "./services/ai";
 
