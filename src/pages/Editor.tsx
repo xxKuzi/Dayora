@@ -234,7 +234,7 @@ export default function Editor({
           value={draftBody}
           onChange={(e) => handleBodyChange(e.target.value)}
           placeholder="Start typing…"
-          className="flex-1 mt-3 h-full placeholder:text-zinc-200/50 dark:placeholder:text-zinc-200/50 resize-none"
+          className="flex-1 mt-3 h-full placeholder:text-zinc-200/50 dark:placeholder:text-zinc-200/50 resize-none typing-area"
         />
       ) : (
         <LivePreviewEditor
@@ -242,7 +242,7 @@ export default function Editor({
           onChange={handleBodyChange}
           readOnly={editorMode === "preview"}
           placeholder={editorMode === "preview" ? "" : "Start typing…"}
-          className="mt-3 placeholder:text-zinc-200/50 dark:placeholder:text-zinc-200/50"
+          className="mt-3 placeholder:text-zinc-200/50 dark:placeholder:text-zinc-200/50 typing-area"
         />
       )}
 

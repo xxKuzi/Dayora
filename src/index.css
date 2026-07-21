@@ -172,3 +172,18 @@ textarea:focus-visible {
     animation: none !important;
   }
 }
+
+/* Typing area: slightly smaller and bolder text for better readability and contrast */
+.typing-area,
+.typing-area textarea,
+.typing-area p,
+.typing-area span,
+.typing-area li {
+  font-size: 0.925rem;
+  font-weight: 500;
+}
+
+.typing-area input:not([type="checkbox"]):not(.font-bold):not(.text-xl):not(.text-2xl):not(.text-3xl):not(.text-lg) {
+  font-size: 0.925rem;
+  font-weight: 500;
+}
