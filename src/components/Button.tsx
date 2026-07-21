@@ -5,7 +5,7 @@ interface ButtonProps {
   onClick?: () => void;
   className?: string;
   title?: string;
-  variant?: "default" | "danger" | "success";
+  variant?: "custom" | "default" | "danger" | "success";
   size?: "sm" | "md";
   disabled?: boolean;
 }
@@ -23,6 +23,7 @@ export default function Button({
     "rounded-lg font-medium transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md";
 
   const variantClasses = {
+    custom: "",
     default:
       "bg-white/20 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 hover:bg-white/30 dark:hover:bg-zinc-700/50 backdrop-blur-sm border border-white/30 dark:border-zinc-600/50",
     danger:
@@ -38,7 +39,7 @@ export default function Button({
 
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
       onClick={onClick}
       title={title}
       disabled={disabled}

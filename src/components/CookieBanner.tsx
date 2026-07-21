@@ -50,8 +50,9 @@ export default function CookieBanner({
             </Button>
             <Button
               onClick={handleAccept}
+              variant="custom"
               size="sm"
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-zinc-100 "
             >
               Accept & Save Data
             </Button>
