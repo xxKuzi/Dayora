@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { DailyPlan, DailyTask, UserSettings } from "../types";
 import { Button, Input, Textarea } from "../components";
 
@@ -23,6 +23,11 @@ export default function DailyPlan({
   const [showManualTable, setShowManualTable] = useState(false);
   const [useTableMode, setUseTableMode] = useState(false);
   const [useAIMode, setUseAIMode] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  
+  const recognitionRef = useRef<any>(null);
+  const startTextRef = useRef("");
+
   const [tableTasks, setTableTasks] = useState<Partial<DailyTask>[]>([
     { text: "", priority: "medium", timeOfDay: "morning" },
     { text: "", priority: "medium", timeOfDay: "midday" },
@@ -165,6 +170,75 @@ export default function DailyPlan({
       handleGeneratePlan();
     }
   };
+
+  const handleToggleVoiceRecord = () => {
+    const SpeechRecognitionClass =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognitionClass) {
+      alert("Speech recognition is not supported in your browser. Please try Chrome or Safari.");
+      return;
+    }
+
+    if (isRecording) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsRecording(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognitionClass();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    startTextRef.current = rawTasks;
+    setIsRecording(true);
+    recognitionRef.current = recognition;
+
+    recognition.onresult = (event: any) => {
+      let interimTranscript = "";
+      let finalTranscript = "";
+
+      for (let i = 0; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+
+      const baseText = startTextRef.current;
+      const separator = baseText && !baseText.endsWith(" ") ? " " : "";
+      
+      const newText = baseText + separator + finalTranscript + interimTranscript;
+      setRawTasks(newText);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      if (event.error === "not-allowed") {
+        alert("Microphone permission was denied. Please enable it in browser settings.");
+      }
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      recognitionRef.current = null;
+    };
+
+    recognition.start();
+  };
+
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
 
   const handleAddTableTask = () => {
     setTableTasks([
@@ -452,11 +526,7 @@ export default function DailyPlan({
                 // AI Text mode
                 <>
                   <p className="text-gray-400 mb-4">
-                    Describe what you need to do today. Press{" "}
-                    <kbd className="px-2 py-1 bg-gray-800 rounded text-sm">
-                      Cmd+Enter
-                    </kbd>{" "}
-                    to generate or use the button.
+                    Describe what you need to do today.
                   </p>
 
                   {aiError && (
@@ -467,13 +537,60 @@ export default function DailyPlan({
                     </div>
                   )}
 
-                  <Textarea
-                    value={rawTasks}
-                    onChange={(e) => setRawTasks(e.target.value)}
-                    onKeyDown={handleKeyPress}
-                    placeholder="Write your tasks here... e.g., 'Meeting with team at 2pm, finish project report, buy groceries, call mom'"
-                    className="w-full min-h-[120px] bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-purple-500 focus:ring-purple-500"
-                  />
+                  <div className={`relative w-full bg-gray-800 border rounded-xl overflow-hidden transition-all duration-300 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 ${
+                    isRecording 
+                      ? "border-red-500/40 ring-1 ring-red-500/30 shadow-[0_0_12px_rgba(239,68,68,0.15)]" 
+                      : "border-gray-700"
+                  }`}>
+                    <Textarea
+                      value={rawTasks}
+                      onChange={(e) => setRawTasks(e.target.value)}
+                      onKeyDown={handleKeyPress}
+                      placeholder="Write your tasks here... e.g., 'Meeting with team at 2pm, finish project report, buy groceries, call mom'"
+                      className="w-full min-h-[120px] !bg-transparent !border-none !px-4 !py-3 text-white placeholder-gray-500 focus:ring-0 focus:outline-none"
+                    />
+                    <div className="flex items-center justify-between px-4 py-2 bg-gray-950/40 border-t border-gray-800/80">
+                      <div className="text-xs text-gray-500 flex items-center gap-1.5">
+                        {isRecording ? (
+                          <span className="flex items-center gap-1.5 text-red-400 font-medium animate-pulse">
+                            <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                            Listening... (speak now)
+                          </span>
+                        ) : (
+                          <>
+                            <span>Press</span>
+                            <kbd className="px-1.5 py-0.5 bg-gray-700 rounded text-[10px] text-gray-300 font-mono">
+                              Cmd+Enter
+                            </kbd>
+                            <span>to generate plan</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleToggleVoiceRecord}
+                          className={`p-2 rounded-lg transition-all duration-200 flex items-center justify-center ${
+                            isRecording
+                              ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                              : "bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white border border-gray-600"
+                          }`}
+                          title={isRecording ? "Stop recording" : "Record voice input"}
+                        >
+                          {isRecording ? (
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <rect x="6" y="6" width="12" height="12" rx="2" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </>
               ) : (
                 // AI Table mode
@@ -935,12 +1052,8 @@ export default function DailyPlan({
             ) : !useTableMode ? (
               // AI Text mode
               <>
-                <p className="text-gray-400 mb-10">
-                  Add more tasks to your plan. Press{" "}
-                  <kbd className="px-2 py-1 bg-gray-800 rounded text-sm">
-                    Cmd+Enter
-                  </kbd>{" "}
-                  to generate or use the button.
+                <p className="text-gray-400 mb-4">
+                  Add more tasks to your plan.
                 </p>
 
                 {aiError && (
@@ -951,13 +1064,60 @@ export default function DailyPlan({
                   </div>
                 )}
 
-                <Textarea
-                  value={rawTasks}
-                  onChange={(e) => setRawTasks(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  placeholder="Write your tasks here... e.g., 'Meeting with team at 2pm, finish project report, buy groceries, call mom'"
-                  className="w-full min-h-[120px] bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-purple-500 focus:ring-purple-500"
-                />
+                <div className={`relative w-full bg-gray-800 border rounded-xl overflow-hidden transition-all duration-300 focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 ${
+                  isRecording 
+                    ? "border-red-500/40 ring-1 ring-red-500/30 shadow-[0_0_12px_rgba(239,68,68,0.15)]" 
+                    : "border-gray-700"
+                }`}>
+                  <Textarea
+                    value={rawTasks}
+                    onChange={(e) => setRawTasks(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    placeholder="Write your tasks here... e.g., 'Meeting with team at 2pm, finish project report, buy groceries, call mom'"
+                    className="w-full min-h-[120px] !bg-transparent !border-none !px-4 !py-3 text-white placeholder-gray-500 focus:ring-0 focus:outline-none"
+                  />
+                  <div className="flex items-center justify-between px-4 py-2 bg-gray-950/40 border-t border-gray-800/80">
+                    <div className="text-xs text-gray-500 flex items-center gap-1.5">
+                      {isRecording ? (
+                        <span className="flex items-center gap-1.5 text-red-400 font-medium animate-pulse">
+                          <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                          Listening... (speak now)
+                        </span>
+                      ) : (
+                        <>
+                          <span>Press</span>
+                          <kbd className="px-1.5 py-0.5 bg-gray-700 rounded text-[10px] text-gray-300 font-mono">
+                            Cmd+Enter
+                          </kbd>
+                          <span>to generate plan</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleToggleVoiceRecord}
+                        className={`p-2 rounded-lg transition-all duration-200 flex items-center justify-center ${
+                          isRecording
+                            ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+                            : "bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white border border-gray-600"
+                        }`}
+                        title={isRecording ? "Stop recording" : "Record voice input"}
+                      >
+                        {isRecording ? (
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <rect x="6" y="6" width="12" height="12" rx="2" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </>
             ) : (
               // AI Table mode
