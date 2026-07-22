@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import type { DailyPlan, DailyTask, UserSettings } from "../types";
 import { Button, Input, Textarea } from "../components";
+import type { User } from "firebase/auth";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { isFirebaseConfigured } from "../services/firebase";
 
 interface DailyPlanProps {
   dailyPlan: DailyPlan | null;
@@ -9,6 +12,7 @@ interface DailyPlanProps {
   onCreatePlan: (date: string) => void;
   onGenerateWithGemini: (tasks: string) => Promise<void>;
   aiError?: string | null;
+  user: User | null;
 }
 
 export default function DailyPlan({
@@ -17,6 +21,7 @@ export default function DailyPlan({
   onCreatePlan,
   onGenerateWithGemini,
   aiError,
+  user,
 }: DailyPlanProps) {
   const [rawTasks, setRawTasks] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -24,6 +29,50 @@ export default function DailyPlan({
   const [useTableMode, setUseTableMode] = useState(false);
   const [useAIMode, setUseAIMode] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
+  
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<"idle" | "success" | "error">("idle");
+  const [emailErrorMsg, setEmailErrorMsg] = useState("");
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleSendEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dailyPlan) return;
+
+    setIsSendingEmail(true);
+    setEmailStatus("idle");
+    setEmailErrorMsg("");
+
+    try {
+      if (!isFirebaseConfigured) {
+        throw new Error("Firebase configuration was not detected.");
+      }
+      
+      const functions = getFunctions();
+      const sendPlanEmailFunc = httpsCallable(functions, "sendPlanEmail");
+      
+      await sendPlanEmailFunc({
+        date: dailyPlan.date,
+        tasks: dailyPlan.tasks,
+      });
+
+      setEmailStatus("success");
+      setTimeout(() => {
+        setIsEmailModalOpen(false);
+        setEmailStatus("idle");
+      }, 2000);
+    } catch (err: any) {
+      console.error("Email send failed:", err);
+      setEmailStatus("error");
+      setEmailErrorMsg(err.message || "An unexpected error occurred.");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
   
   const recognitionRef = useRef<any>(null);
   const startTextRef = useRef("");
@@ -881,6 +930,22 @@ export default function DailyPlan({
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
+
+          {/* Action Bar */}
+          <div className="flex gap-3 mt-4 justify-end">
+            <button
+              onClick={handlePrint}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border border-gray-800 bg-gray-900/60 text-gray-300 hover:text-white hover:bg-gray-800/80 hover:border-gray-700 active:scale-95 flex items-center gap-2 cursor-pointer"
+            >
+              <span>🖨️</span> Print Plan
+            </button>
+            <button
+              onClick={() => setIsEmailModalOpen(true)}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border border-purple-900/40 bg-purple-950/20 text-purple-300 hover:text-white hover:bg-purple-900/30 hover:border-purple-700/60 active:scale-95 flex items-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(168,85,247,0.05)] hover:shadow-[0_0_20px_rgba(168,85,247,0.15)]"
+            >
+              <span>✉️</span> Email Plan
+            </button>
+          </div>
         </div>
 
         {/* AI or MANUAL Generation */}
@@ -1662,6 +1727,108 @@ export default function DailyPlan({
           )}
         </div>
       </div>
+
+      {/* Email Modal */}
+      {isEmailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 transition-all duration-300">
+          <div 
+            className="bg-gray-950 border border-gray-800/80 rounded-2xl p-6 max-w-md w-full shadow-[0_0_50px_rgba(168,85,247,0.15)] transform scale-100 transition-all duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <span>✉️</span> Send Plan via Email
+              </h3>
+              <button 
+                onClick={() => {
+                  setIsEmailModalOpen(false);
+                  setEmailStatus("idle");
+                }} 
+                className="text-gray-400 hover:text-white transition-colors p-1 hover:bg-gray-900 rounded-lg text-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {emailStatus === "success" ? (
+              <div className="text-center py-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 text-green-400 border border-green-500/30 text-3xl mb-4 animate-bounce">
+                  ✓
+                </div>
+                <h4 className="text-lg font-semibold text-white mb-2">Sent Successfully!</h4>
+                <p className="text-gray-400 text-sm">Your daily plan has been sent to {user?.email}.</p>
+              </div>
+            ) : !user ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-purple-950/20 border border-purple-900/30 rounded-xl text-center">
+                  <span className="text-3xl mb-2 block">🔒</span>
+                  <h4 className="text-base font-semibold text-purple-200 mb-1">Sign-In Required</h4>
+                  <p className="text-gray-400 text-sm leading-relaxed">
+                    To prevent spam and protect email delivery limits, sending plans to email is restricted to signed-in accounts.
+                  </p>
+                </div>
+                <p className="text-gray-400 text-xs text-center leading-normal">
+                  Please use the <strong>Sign In</strong> button in the left sidebar to authenticate, then try again.
+                </p>
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={() => setIsEmailModalOpen(false)}
+                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm font-medium transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSendEmail} className="space-y-4">
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  We will send your daily plan format to your registered account email:
+                </p>
+
+                {emailStatus === "error" && (
+                  <div className="p-3 bg-red-950/30 border border-red-900/30 rounded-xl">
+                    <p className="text-red-400 text-xs leading-normal">
+                      <strong>Failed to send:</strong> {emailErrorMsg}
+                    </p>
+                  </div>
+                )}
+
+                <div className="p-4 bg-gray-900/60 border border-gray-800 rounded-xl text-center text-purple-300 font-medium tracking-wide">
+                  {user.email}
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3">
+                  <button
+                    type="button"
+                    disabled={isSendingEmail}
+                    onClick={() => {
+                      setIsEmailModalOpen(false);
+                      setEmailStatus("idle");
+                    }}
+                    className="px-4 py-2 bg-transparent hover:bg-gray-900 border border-gray-800 hover:border-gray-700 text-gray-300 hover:text-white rounded-xl text-sm font-medium transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSendingEmail}
+                    className="px-5 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-md shadow-purple-950/20 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2 cursor-pointer"
+                  >
+                    {isSendingEmail ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        Sending...
+                      </>
+                    ) : (
+                      "Send Plan"
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

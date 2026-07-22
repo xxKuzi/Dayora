@@ -1011,6 +1011,7 @@ export default function App() {
               onCreatePlan={handleCreateDailyPlan}
               onGenerateWithGemini={handleGenerateWithGemini}
               aiError={aiError}
+              user={user}
             />
           )}
 
