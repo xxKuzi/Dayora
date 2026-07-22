@@ -182,7 +182,7 @@ export default function App() {
       initializeAI();
       setAiError(null);
     } catch {
-      console.warn("VITE_GEMINI_API_KEY not found in environment variables");
+      console.warn("GEMINI_API_KEY not found in environment variables");
       setAiError("AI API key not configured");
     }
   }, []);

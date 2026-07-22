@@ -780,7 +780,7 @@ export default function DailyPlan({
                 <div className="flex items-center gap-1.5 ml-2 no-print bg-white/50 dark:bg-black/30 border border-black/10 dark:border-white/5 rounded-xl p-1 backdrop-blur-sm shadow-sm">
                   <button
                     onClick={handlePrevDay}
-                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-zinc-650 dark:text-zinc-350 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer text-sm font-semibold flex items-center justify-center w-8 h-8"
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer text-sm font-semibold flex items-center justify-center w-8 h-8"
                     title="Previous Day"
                   >
                     ◀
@@ -805,7 +805,7 @@ export default function DailyPlan({
                   </div>
                   <button
                     onClick={handleNextDay}
-                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-zinc-650 dark:text-zinc-350 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer text-sm font-semibold flex items-center justify-center w-8 h-8"
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer text-sm font-semibold flex items-center justify-center w-8 h-8"
                     title="Next Day"
                   >
                     ▶
@@ -862,7 +862,7 @@ export default function DailyPlan({
                 </button>
                 <button
                   onClick={() => setIsEmailModalOpen(true)}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 bg-purple-650 hover:bg-purple-750 text-white border border-transparent shadow-md shadow-purple-900/20 active:scale-95 flex items-center gap-2 cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 bg-purple-600 hover:bg-purple-700 text-white border border-transparent shadow-md shadow-purple-900/20 active:scale-95 flex items-center gap-2 cursor-pointer"
                 >
                   <span>✉️</span> Email Plan
                 </button>
@@ -1822,7 +1822,7 @@ export default function DailyPlan({
             <h4 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
               Sent Successfully!
             </h4>
-            <p className="text-zinc-650 dark:text-gray-400 text-sm">
+            <p className="text-zinc-600 dark:text-gray-400 text-sm">
               Your daily plan has been sent to{" "}
               <strong className="text-zinc-800 dark:text-zinc-200">
                 {user?.email}
@@ -1837,32 +1837,32 @@ export default function DailyPlan({
               <h4 className="text-base font-semibold text-purple-800 dark:text-purple-300 mb-1">
                 Sign-In Required
               </h4>
-              <p className="text-zinc-650 dark:text-gray-300 text-sm leading-relaxed">
+              <p className="text-zinc-600 dark:text-gray-300 text-sm leading-relaxed">
                 To prevent spam and protect email delivery limits, sending plans
                 to email is restricted to signed-in accounts.
               </p>
             </div>
-            <p className="text-zinc-550 dark:text-gray-400 text-xs text-center leading-normal">
+            <p className="text-zinc-500 dark:text-gray-400 text-xs text-center leading-normal">
               Please use the <strong>Sign In</strong> button in the left sidebar
               to authenticate, then try again.
             </p>
           </div>
         ) : (
           <div className="space-y-4 pt-1">
-            <p className="text-zinc-650 dark:text-gray-300 text-sm leading-relaxed">
+            <p className="text-zinc-600 dark:text-gray-300 text-sm leading-relaxed">
               We will send your daily plan format to your registered account
               email:
             </p>
 
             {emailStatus === "error" && (
               <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-xl">
-                <p className="text-red-650 dark:text-red-400 text-xs leading-normal">
+                <p className="text-red-600 dark:text-red-400 text-xs leading-normal">
                   <strong>Failed to send:</strong> {emailErrorMsg}
                 </p>
               </div>
             )}
 
-            <div className="p-4 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-center text-purple-650 dark:text-purple-400 font-bold tracking-wide text-sm">
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-center text-purple-600 dark:text-purple-400 font-bold tracking-wide text-sm">
               {user.email}
             </div>
           </div>
@@ -1883,7 +1883,7 @@ export default function DailyPlan({
                 onMoveTaskToTomorrow?.(editingTask.id, dailyPlan.date);
                 setEditingTask(null);
               }}
-              className="px-2.5 py-1 text-xs border border-purple-200 dark:border-purple-800/60 text-purple-650 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-colors font-semibold flex items-center gap-1 cursor-pointer"
+              className="px-2.5 py-1 text-xs border border-purple-200 dark:border-purple-800/60 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-colors font-semibold flex items-center gap-1 cursor-pointer"
             >
               ➡️ Tomorrow
             </button>
@@ -1912,7 +1912,7 @@ export default function DailyPlan({
                         setEditingTask(null);
                       }
                     }}
-                    className="px-3 py-1.5 bg-red-500 hover:bg-red-650 dark:bg-red-600 dark:hover:bg-red-700 text-white text-xs font-semibold rounded-xl transition-all active:scale-95 shadow-md shadow-red-950/20 cursor-pointer"
+                    className="px-3 py-1.5 bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white text-xs font-semibold rounded-xl transition-all active:scale-95 shadow-md shadow-red-950/20 cursor-pointer"
                   >
                     Yes, delete
                   </button>
@@ -1923,7 +1923,7 @@ export default function DailyPlan({
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="px-4 py-2 text-red-500 hover:text-red-650 dark:hover:text-red-400 font-semibold text-sm transition-colors hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl cursor-pointer"
+                  className="px-4 py-2 text-red-500 hover:text-red-600 dark:hover:text-red-400 font-semibold text-sm transition-colors hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl cursor-pointer"
                 >
                   🗑️ Delete Task
                 </button>
