@@ -1027,36 +1027,53 @@ export default function App() {
 
   async function handleGenerateWithGemini(tasks: string, date: string) {
     // 1. Enforce client-side limit check
-    if (user) {
-      const limit = isPro ? 20 : 3;
-      if (dailyUsage.aiCount >= limit) {
-        if (isPro) {
-          setAiError(
-            "You have reached your Pro daily limit of 20 AI prompts. Limits reset daily.",
-          );
-        } else {
-          setIsUpgradeModalOpen(true);
-        }
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    if (!isPro && !user.emailVerified) {
+      try {
+        await user.reload();
+      } catch (err) {
+        console.error("Failed to reload user profile:", err);
+      }
+      
+      if (!user.emailVerified) {
+        setAiError(
+          "Please verify your email address to use the AI daily plan generator. Check your inbox for the verification email."
+        );
         return;
       }
-    } else {
-      if (anonAiCount >= 1) {
+    }
+
+    const limit = isPro ? 20 : 3;
+    if (dailyUsage.aiCount >= limit) {
+      if (isPro) {
+        setAiError(
+          "You have reached your Pro daily limit of 20 AI prompts. Limits reset daily.",
+        );
+      } else {
         setIsUpgradeModalOpen(true);
-        return;
       }
+      return;
     }
 
     try {
       setAiError(null);
       const aiService = getAIService();
 
-      // Get Bearer token if logged in
-      const token = user ? await user.getIdToken() : undefined;
+      // Get Bearer token
+      const token = await user.getIdToken();
       const generatedPlan = await aiService.generateDailyPlan(
         tasks,
         settings,
         token,
       );
+
+      if ((generatedPlan as any).debugInfo) {
+        console.warn("AI Plan Debug Info:", (generatedPlan as any).debugInfo);
+      }
 
       const existingPlan = dailyPlans.find((plan) => plan.date === date);
 
@@ -1076,17 +1093,6 @@ export default function App() {
           updatedAt: Date.now(),
         };
         setDailyPlans((prev) => [newPlan, ...prev]);
-      }
-
-      // If anonymous, increment local limit count
-      if (!user) {
-        const nextAnonCount = anonAiCount + 1;
-        setAnonAiCount(nextAnonCount);
-        const dateStr = new Date().toISOString().split("T")[0];
-        localStorage.setItem(
-          "dayora_anon_usage",
-          JSON.stringify({ date: dateStr, aiCount: nextAnonCount }),
-        );
       }
     } catch (error: any) {
       console.error("AI generation failed:", error);

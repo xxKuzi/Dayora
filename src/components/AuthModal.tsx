@@ -5,6 +5,7 @@ import {
   sendPasswordResetEmail,
   signInWithPopup,
   updateProfile,
+  sendEmailVerification,
 } from "firebase/auth";
 import { auth, googleProvider, isFirebaseConfigured } from "../services/firebase";
 import Input from "./Input";
@@ -114,6 +115,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       setLoading(true);
       try {
         const cred = await createUserWithEmailAndPassword(auth, emailTrim, password);
+        try {
+          await sendEmailVerification(cred.user);
+        } catch (verifyErr) {
+          console.error("Failed to send verification email:", verifyErr);
+        }
         if (displayName.trim()) {
           await updateProfile(cred.user, {
             displayName: displayName.trim(),

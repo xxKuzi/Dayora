@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 import type { DailyPlan, DailyTask, UserSettings } from "../types";
 import { Button, Input, Textarea, Modal } from "../components";
-import type { User } from "firebase/auth";
+import { sendEmailVerification, type User } from "firebase/auth";
 import { isFirebaseConfigured } from "../services/firebase";
 
 interface DailyPlanProps {
@@ -156,7 +156,23 @@ export default function DailyPlan({
   anonAiCount = 0,
   onUpgradeClick,
 }: DailyPlanProps) {
-  const [rawTasks, setRawTasks] = useState("");
+  const [rawTasks, setRawTasks] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("dayora_pending_prompt") || "";
+    }
+    return "";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (rawTasks.trim()) {
+        localStorage.setItem("dayora_pending_prompt", rawTasks);
+      } else {
+        localStorage.removeItem("dayora_pending_prompt");
+      }
+    }
+  }, [rawTasks]);
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [useTableMode, setUseTableMode] = useState(false);
   const [useAIMode, setUseAIMode] = useState(true);
@@ -317,6 +333,26 @@ export default function DailyPlan({
     "idle",
   );
   const [emailErrorMsg, setEmailErrorMsg] = useState("");
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+
+  const handleResendVerification = async () => {
+    if (!user) return;
+    setIsResendingVerification(true);
+    try {
+      await sendEmailVerification(user);
+      alert(
+        "Verification email sent! Please check your inbox (and Spam folder).",
+      );
+    } catch (err: any) {
+      console.error("Failed to resend verification:", err);
+      alert(
+        err.message ||
+          "Failed to send verification email. Please try again later.",
+      );
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
 
   const isGmailUser =
     user?.email?.toLowerCase().endsWith("@gmail.com") ?? false;
@@ -418,9 +454,13 @@ export default function DailyPlan({
         }),
       });
 
+      const data = await response.json().catch(() => ({}));
+      if (data.debugInfo) {
+        console.warn("Email Route Debug Info:", data.debugInfo);
+      }
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to send email");
+        throw new Error(data.error || "Failed to send email");
       }
 
       setEmailStatus("success");
@@ -586,6 +626,11 @@ export default function DailyPlan({
       } else {
         // AI Text mode - use AI generation
         if (!rawTasks.trim()) return;
+
+        if (!user) {
+          onGenerateWithGemini(rawTasks, selectedDate);
+          return;
+        }
 
         setIsGenerating(true);
         try {
@@ -1287,18 +1332,32 @@ export default function DailyPlan({
                       ✨ Pro Member: Unlimited AI plan generation
                     </span>
                   ) : user ? (
-                    <span className={`text-xs font-semibold ${20 - (dailyUsage?.aiCount || 0) <= 0 ? "text-purple-400" : "text-zinc-500 dark:text-gray-400"}`}>
-                      {20 - (dailyUsage?.aiCount || 0) > 0 
-                        ? `✨ ${20 - (dailyUsage?.aiCount || 0)} of 20 free daily AI prompts remaining`
-                        : "⚠️ Daily limit reached. Go Pro to continue!"
-                      }
-                    </span>
+                    !user.emailVerified ? (
+                      <span className="text-xs text-red-500 dark:text-red-400 font-semibold flex items-center gap-1.5 justify-center">
+                        🔒 Please verify your email to use AI plan generation.
+                        Please check SPAM Folder.{" "}
+                        <button
+                          onClick={handleResendVerification}
+                          disabled={isResendingVerification}
+                          className="underline hover:text-red-600 dark:hover:text-red-300 font-bold cursor-pointer disabled:opacity-50"
+                        >
+                          {isResendingVerification
+                            ? "Sending..."
+                            : "Resend Link"}
+                        </button>
+                      </span>
+                    ) : (
+                      <span
+                        className={`text-xs font-semibold ${3 - (dailyUsage?.aiCount || 0) <= 0 ? "text-purple-400" : "text-zinc-500 dark:text-gray-400"}`}
+                      >
+                        {3 - (dailyUsage?.aiCount || 0) > 0
+                          ? `✨ ${3 - (dailyUsage?.aiCount || 0)} of 3 free daily AI prompts remaining`
+                          : "⚠️ Daily limit reached. Go Pro to continue!"}
+                      </span>
+                    )
                   ) : (
-                    <span className={`text-xs font-semibold ${1 - anonAiCount <= 0 ? "text-purple-400" : "text-zinc-500 dark:text-gray-400"}`}>
-                      {1 - anonAiCount > 0 
-                        ? `✨ ${1 - anonAiCount} of 1 free daily AI prompt remaining`
-                        : "⚠️ Limit reached. Sign in for 20 free prompts, or go Pro!"
-                      }
+                    <span className="text-xs text-zinc-500 dark:text-gray-400 font-semibold">
+                      🔒 Sign in for 3 free daily AI prompts
                     </span>
                   )}
                 </div>
@@ -1814,7 +1873,9 @@ export default function DailyPlan({
             >
               Done
             </button>
-          ) : !user || isEmailRestricted || (!isPro && (dailyUsage?.emailCount ?? 0) >= 10) ? (
+          ) : !user ||
+            isEmailRestricted ||
+            (!isPro && (dailyUsage?.emailCount ?? 0) >= 10) ? (
             <button
               onClick={() => setIsEmailModalOpen(false)}
               className="px-4 py-2 bg-black/5 dark:bg-zinc-800 hover:bg-black/10 dark:hover:bg-zinc-700 text-zinc-700 dark:text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer"
@@ -1928,7 +1989,7 @@ export default function DailyPlan({
                 Daily Email Limit Reached
               </h4>
               <p className="text-zinc-600 dark:text-gray-300 text-sm leading-relaxed">
-                Free accounts can send <strong>10 daily plan emails</strong>. 
+                Free accounts can send <strong>10 daily plan emails</strong>.
                 Upgrade to Pro to remove all daily limits!
               </p>
             </div>

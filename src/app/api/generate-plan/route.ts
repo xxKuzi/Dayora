@@ -1,28 +1,96 @@
 import { NextResponse } from "next/server";
 import admin from "firebase-admin";
-
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || "dayora-app",
-    });
-  } catch (error) {
-    console.error("Failed to initialize firebase-admin in generate-plan route:", error);
-  }
-}
+import crypto from "crypto";
 
 export async function POST(request: Request) {
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || "dayora-app";
+  let firestoreErrorMsg: string | null = null;
+  let initErrorMsg: string | null = null;
+
+  if (!admin.apps.some(app => app?.name === "[DEFAULT]")) {
+    try {
+      const serviceAccountKey = process.env.FB_SERVICE_ACCOUNT || process.env.FIREBASE_SERVICE_ACCOUNT;
+      const clientEmail = process.env.FB_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL;
+      const privateKey = process.env.FB_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY;
+
+      if (serviceAccountKey) {
+        let cleanedKey = serviceAccountKey.trim();
+        if ((cleanedKey.startsWith("'") && cleanedKey.endsWith("'")) || 
+            (cleanedKey.startsWith('"') && cleanedKey.endsWith('"'))) {
+          cleanedKey = cleanedKey.slice(1, -1).trim();
+        }
+
+        let parsedKey;
+        try {
+          parsedKey = JSON.parse(cleanedKey);
+        } catch (parseErr: any) {
+          try {
+            const unescaped = cleanedKey.replace(/\\"/g, '"').replace(/\\n/g, '\n');
+            parsedKey = JSON.parse(unescaped);
+          } catch (secondErr: any) {
+            throw new Error(`JSON parse failed for FB_SERVICE_ACCOUNT: ${parseErr.message}. Raw length: ${serviceAccountKey.length}. Prefix: ${serviceAccountKey.substring(0, 15)}`);
+          }
+        }
+
+        admin.initializeApp({
+          credential: admin.credential.cert(parsedKey),
+          projectId,
+        });
+      } else if (clientEmail && privateKey) {
+        let cleanedKey = privateKey.trim();
+        if ((cleanedKey.startsWith("'") && cleanedKey.endsWith("'")) || 
+            (cleanedKey.startsWith('"') && cleanedKey.endsWith('"'))) {
+          cleanedKey = cleanedKey.slice(1, -1).trim();
+        }
+        admin.initializeApp({
+          credential: admin.credential.cert({
+            projectId,
+            clientEmail,
+            privateKey: cleanedKey.replace(/\\n/g, "\n"),
+          }),
+          projectId,
+        });
+      } else {
+        admin.initializeApp({
+          projectId,
+        });
+      }
+    } catch (error: any) {
+      console.error("Failed to initialize firebase-admin in generate-plan route:", error);
+      initErrorMsg = error?.message || String(error);
+    }
+  }
+
+  const sendResponse = (body: any, init?: ResponseInit) => {
+    if (body && typeof body === "object" && !Array.isArray(body)) {
+      body.debugInfo = {
+        projectId,
+        nodeEnv: process.env.NODE_ENV || "unknown",
+        firestoreError: firestoreErrorMsg,
+      };
+    }
+    const res = NextResponse.json(body, init);
+    res.headers.set("x-project-id", projectId);
+    res.headers.set("x-node-env", process.env.NODE_ENV || "unknown");
+    if (firestoreErrorMsg) {
+      res.headers.set("x-firestore-error", firestoreErrorMsg);
+    }
+    return res;
+  };
+
   try {
     const { rawTasks, userSettings } = await request.json();
 
     // 1. Verify Authentication if Bearer token is provided
     let uid: string | null = null;
+    let emailVerified = false;
     const authHeader = request.headers.get("authorization");
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.split("Bearer ")[1];
       try {
         const decodedToken = await admin.auth().verifyIdToken(token);
         uid = decodedToken.uid;
+        emailVerified = !!decodedToken.email_verified;
       } catch (authError) {
         console.error("Token verification failed in generate-plan:", authError);
       }
@@ -34,6 +102,16 @@ export async function POST(request: Request) {
       const db = admin.firestore();
 
       if (uid) {
+        if (!emailVerified) {
+          return sendResponse(
+            {
+              error: "EMAIL_NOT_VERIFIED",
+              message: "Please verify your email address to use the AI daily plan generator.",
+            },
+            { status: 403 }
+          );
+        }
+
         // Logged-in user limit: 3/day (unless Pro)
         const subsSnapshot = await db
           .collection("users")
@@ -52,7 +130,7 @@ export async function POST(request: Request) {
         const limit = isPro ? 20 : 3;
 
         if (aiCount >= limit) {
-          return NextResponse.json(
+          return sendResponse(
             {
               error: "AI_LIMIT_EXCEEDED",
               message: isPro 
@@ -70,41 +148,29 @@ export async function POST(request: Request) {
           { merge: true }
         );
       } else {
-        // Unsigned user limit: 1/day
-        const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || request.headers.get("x-real-ip") || "anonymous";
-        const ipDocRef = db.collection("ipUsage").doc(`${ip}_${dateStr}`);
-        const ipDoc = await ipDocRef.get();
-        const ipData = ipDoc.data() || { aiCount: 0 };
-        const aiCount = ipData.aiCount || 0;
-
-        if (aiCount >= 1) {
-          return NextResponse.json(
-            {
-              error: "AI_LIMIT_EXCEEDED",
-              message: "You have reached your daily limit of 1 free AI prompt. Sign in for 20 free daily prompts, or upgrade to Pro.",
-            },
-            { status: 403 }
-          );
-        }
-
-        await ipDocRef.set(
+        return sendResponse(
           {
-            aiCount: admin.firestore.FieldValue.increment(1),
+            error: "UNAUTHORIZED",
+            message: "Authentication required. Please sign in to generate a daily plan.",
           },
-          { merge: true }
+          { status: 401 }
         );
       }
-    } catch (dbError) {
+    } catch (dbError: any) {
       console.error("Firestore limits validation failed, bypassing check:", dbError);
+      firestoreErrorMsg = dbError?.message || String(dbError);
+      if (initErrorMsg) {
+        firestoreErrorMsg = `Initialization failed: ${initErrorMsg}. Firestore error: ${firestoreErrorMsg}`;
+      }
     }
 
     if (!rawTasks) {
-      return NextResponse.json({ error: "Missing rawTasks parameter" }, { status: 400 });
+      return sendResponse({ error: "Missing rawTasks parameter" }, { status: 400 });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "Gemini API key is not configured on the server" }, { status: 500 });
+      return sendResponse({ error: "Gemini API key is not configured on the server" }, { status: 500 });
     }
 
     // Port prompt building logic from client services
@@ -179,7 +245,7 @@ Make sure the response is valid JSON and includes all tasks from the user's inpu
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
       const msg = data?.error?.message || response.statusText;
-      return NextResponse.json({ error: `Gemini API error: ${msg}` }, { status: response.status });
+      return sendResponse({ error: `Gemini API error: ${msg}` }, { status: response.status });
     }
 
     const data = await response.json();
@@ -188,7 +254,7 @@ Make sure the response is valid JSON and includes all tasks from the user's inpu
     )?.text;
 
     if (!firstText) {
-      return NextResponse.json({ error: "No text candidates returned from Gemini API" }, { status: 500 });
+      return sendResponse({ error: "No text candidates returned from Gemini API" }, { status: 500 });
     }
 
     // Parse logic
@@ -210,7 +276,7 @@ Make sure the response is valid JSON and includes all tasks from the user's inpu
         time: task.time || undefined,
       }));
 
-      return NextResponse.json({ tasks, summary: parsed.summary || "AI-generated daily plan" });
+      return sendResponse({ tasks, summary: parsed.summary || "AI-generated daily plan" });
     } catch (parseErr) {
       console.error("Failed to parse AI response:", parseErr, "\nRaw response:", firstText);
       const lines = firstText.split("\n").filter((l: string) => l.trim());
@@ -221,13 +287,13 @@ Make sure the response is valid JSON and includes all tasks from the user's inpu
         priority: "medium",
         timeOfDay: "morning",
       }));
-      return NextResponse.json({
+      return sendResponse({
         tasks: fallbackTasks,
         summary: "AI-generated daily plan (parsed with fallback)",
       });
     }
   } catch (err: any) {
     console.error("API error:", err);
-    return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
+    return sendResponse({ error: err.message || "Internal server error" }, { status: 500 });
   }
 }

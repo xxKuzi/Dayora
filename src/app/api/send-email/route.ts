@@ -10,22 +10,87 @@ interface Task {
   timeOfDay?: "morning" | "midday" | "evening";
 }
 
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || "dayora-app",
-    });
-  } catch (error) {
-    console.error("Failed to initialize firebase-admin:", error);
-  }
-}
-
 export async function POST(request: Request) {
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || "dayora-app";
+  let firestoreErrorMsg: string | null = null;
+  let initErrorMsg: string | null = null;
+
+  if (!admin.apps.some(app => app?.name === "[DEFAULT]")) {
+    try {
+      const serviceAccountKey = process.env.FB_SERVICE_ACCOUNT || process.env.FIREBASE_SERVICE_ACCOUNT;
+      const clientEmail = process.env.FB_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL;
+      const privateKey = process.env.FB_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY;
+
+      if (serviceAccountKey) {
+        let cleanedKey = serviceAccountKey.trim();
+        if ((cleanedKey.startsWith("'") && cleanedKey.endsWith("'")) || 
+            (cleanedKey.startsWith('"') && cleanedKey.endsWith('"'))) {
+          cleanedKey = cleanedKey.slice(1, -1).trim();
+        }
+
+        let parsedKey;
+        try {
+          parsedKey = JSON.parse(cleanedKey);
+        } catch (parseErr: any) {
+          try {
+            const unescaped = cleanedKey.replace(/\\"/g, '"').replace(/\\n/g, '\n');
+            parsedKey = JSON.parse(unescaped);
+          } catch (secondErr: any) {
+            throw new Error(`JSON parse failed for FB_SERVICE_ACCOUNT: ${parseErr.message}. Raw length: ${serviceAccountKey.length}. Prefix: ${serviceAccountKey.substring(0, 15)}`);
+          }
+        }
+
+        admin.initializeApp({
+          credential: admin.credential.cert(parsedKey),
+          projectId,
+        });
+      } else if (clientEmail && privateKey) {
+        let cleanedKey = privateKey.trim();
+        if ((cleanedKey.startsWith("'") && cleanedKey.endsWith("'")) || 
+            (cleanedKey.startsWith('"') && cleanedKey.endsWith('"'))) {
+          cleanedKey = cleanedKey.slice(1, -1).trim();
+        }
+        admin.initializeApp({
+          credential: admin.credential.cert({
+            projectId,
+            clientEmail,
+            privateKey: cleanedKey.replace(/\\n/g, "\n"),
+          }),
+          projectId,
+        });
+      } else {
+        admin.initializeApp({
+          projectId,
+        });
+      }
+    } catch (error: any) {
+      console.error("Failed to initialize firebase-admin:", error);
+      initErrorMsg = error?.message || String(error);
+    }
+  }
+
+  const sendResponse = (body: any, init?: ResponseInit) => {
+    if (body && typeof body === "object" && !Array.isArray(body)) {
+      body.debugInfo = {
+        projectId,
+        nodeEnv: process.env.NODE_ENV || "unknown",
+        firestoreError: firestoreErrorMsg,
+      };
+    }
+    const res = NextResponse.json(body, init);
+    res.headers.set("x-project-id", projectId);
+    res.headers.set("x-node-env", process.env.NODE_ENV || "unknown");
+    if (firestoreErrorMsg) {
+      res.headers.set("x-firestore-error", firestoreErrorMsg);
+    }
+    return res;
+  };
+
   try {
     // 1. Verify Authentication via Bearer token
     const authHeader = request.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized: Missing or invalid authorization header" }, { status: 401 });
+      return sendResponse({ error: "Unauthorized: Missing or invalid authorization header" }, { status: 401 });
     }
     
     const token = authHeader.split("Bearer ")[1];
@@ -34,24 +99,24 @@ export async function POST(request: Request) {
       decodedToken = await admin.auth().verifyIdToken(token);
     } catch (authError: any) {
       console.error("Firebase ID Token verification failed:", authError);
-      return NextResponse.json({ error: `Unauthorized: ${authError.message}` }, { status: 401 });
+      return sendResponse({ error: `Unauthorized: ${authError.message}` }, { status: 401 });
     }
 
     const email = decodedToken.email;
     const emailVerified = decodedToken.email_verified;
 
     if (!email) {
-      return NextResponse.json({ error: "Unauthorized: User token does not contain an email address" }, { status: 401 });
+      return sendResponse({ error: "Unauthorized: User token does not contain an email address" }, { status: 401 });
     }
 
     // A. Verify that the user's email is verified
     if (!emailVerified) {
-      return NextResponse.json({ error: "Forbidden: Your email address must be verified to send plans." }, { status: 403 });
+      return sendResponse({ error: "Forbidden: Your email address must be verified to send plans." }, { status: 403 });
     }
 
     // B. Restrict strictly to gmail.com addresses
     if (!email.toLowerCase().endsWith("@gmail.com")) {
-      return NextResponse.json({ error: "Forbidden: Only @gmail.com addresses are allowed to send plans." }, { status: 403 });
+      return sendResponse({ error: "Forbidden: Only @gmail.com addresses are allowed to send plans." }, { status: 403 });
     }
 
     // C. Verify daily email limits (1 email/day for non-pro, unlimited for Pro)
@@ -74,7 +139,7 @@ export async function POST(request: Request) {
         const emailCount = usageData.emailCount || 0;
 
         if (emailCount >= 10) {
-          return NextResponse.json(
+          return sendResponse(
             {
               error: "EMAIL_LIMIT_EXCEEDED",
               message: "You have reached your daily limit of 10 emails. Upgrade to Pro for unlimited emails.",
@@ -90,8 +155,12 @@ export async function POST(request: Request) {
           { merge: true }
         );
       }
-    } catch (dbError) {
+    } catch (dbError: any) {
       console.error("Firestore email limits validation failed, bypassing check:", dbError);
+      firestoreErrorMsg = dbError?.message || String(dbError);
+      if (initErrorMsg) {
+        firestoreErrorMsg = `Initialization failed: ${initErrorMsg}. Firestore error: ${firestoreErrorMsg}`;
+      }
     }
 
     // 2. Validate Inputs
@@ -101,7 +170,7 @@ export async function POST(request: Request) {
     };
 
     if (!date || !tasks || !Array.isArray(tasks)) {
-      return NextResponse.json({ error: "Missing or invalid parameters: date and tasks are required." }, { status: 400 });
+      return sendResponse({ error: "Missing or invalid parameters: date and tasks are required." }, { status: 400 });
     }
 
     const formattedDate = new Date(date).toLocaleDateString("en-US", {
@@ -113,7 +182,7 @@ export async function POST(request: Request) {
 
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
-      return NextResponse.json({ error: "Resend API key is not configured on the server." }, { status: 500 });
+      return sendResponse({ error: "Resend API key is not configured on the server." }, { status: 500 });
     }
 
     const resend = new Resend(resendApiKey);
@@ -228,9 +297,9 @@ export async function POST(request: Request) {
       throw new Error(error.message);
     }
 
-    return NextResponse.json({ success: true, id: data?.id });
+    return sendResponse({ success: true, id: data?.id });
   } catch (err: any) {
     console.error("Resend API error:", err);
-    return NextResponse.json({ error: err.message || "Failed to dispatch email via Resend." }, { status: 500 });
+    return sendResponse({ error: err.message || "Failed to dispatch email via Resend." }, { status: 500 });
   }
 }
