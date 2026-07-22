@@ -121,6 +121,9 @@ export default function App() {
   const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>(
     initial?.dailyPlans ?? [],
   );
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    return new Date().toISOString().split("T")[0];
+  });
   const [settings, setSettings] = useState<UserSettings>(
     initial?.settings ?? {
       userType: "worker",
@@ -833,14 +836,13 @@ export default function App() {
     );
   }
 
-  async function handleGenerateWithGemini(tasks: string) {
+  async function handleGenerateWithGemini(tasks: string, date: string) {
     try {
       setAiError(null);
       const aiService = getAIService();
       const generatedPlan = await aiService.generateDailyPlan(tasks, settings);
 
-      const today = new Date().toISOString().split("T")[0];
-      const existingPlan = dailyPlans.find((plan) => plan.date === today);
+      const existingPlan = dailyPlans.find((plan) => plan.date === date);
 
       if (existingPlan) {
         const updatedPlan = {
@@ -852,7 +854,7 @@ export default function App() {
       } else {
         const newPlan: DailyPlan = {
           id: `plan_${Math.random().toString(36).slice(2, 9)}`,
-          date: today,
+          date: date,
           tasks: generatedPlan.tasks,
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -867,6 +869,71 @@ export default function App() {
           : "Failed to generate plan with AI",
       );
       // Don't automatically fall back - let user choose
+    }
+  }
+
+  function handleMoveTaskToTomorrow(taskId: string, currentPlanDate: string) {
+    const action = () => {
+      const [year, month, day] = currentPlanDate.split("-").map(Number);
+      const date = new Date(year, month - 1, day);
+      date.setDate(date.getDate() + 1);
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      const tomorrowDate = `${y}-${m}-${d}`;
+
+      const currentPlan = dailyPlans.find((plan) => plan.date === currentPlanDate);
+      if (!currentPlan) return;
+
+      const taskToMove = currentPlan.tasks.find((task) => task.id === taskId);
+      if (!taskToMove) return;
+
+      const updatedCurrentPlan = {
+        ...currentPlan,
+        tasks: currentPlan.tasks.filter((task) => task.id !== taskId),
+        updatedAt: Date.now(),
+      };
+
+      const tomorrowPlan = dailyPlans.find((plan) => plan.date === tomorrowDate);
+      let updatedTomorrowPlan: DailyPlan;
+      if (tomorrowPlan) {
+        updatedTomorrowPlan = {
+          ...tomorrowPlan,
+          tasks: [...tomorrowPlan.tasks, { ...taskToMove, completed: false }],
+          updatedAt: Date.now(),
+        };
+      } else {
+        updatedTomorrowPlan = {
+          id: `plan_${Math.random().toString(36).slice(2, 9)}`,
+          date: tomorrowDate,
+          tasks: [{ ...taskToMove, completed: false }],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+      }
+
+      setDailyPlans((prev) => {
+        const filtered = prev.map((plan) => {
+          if (plan.date === currentPlanDate) return updatedCurrentPlan;
+          if (plan.date === tomorrowDate) return updatedTomorrowPlan;
+          return plan;
+        });
+
+        if (!tomorrowPlan) {
+          return [updatedTomorrowPlan, ...filtered];
+        }
+        return filtered;
+      });
+    };
+
+    if (document.startViewTransition) {
+      document.startViewTransition(() => {
+        flushSync(() => {
+          action();
+        });
+      });
+    } else {
+      action();
     }
   }
 
@@ -1039,7 +1106,7 @@ export default function App() {
               dailyPlan={
                 dailyPlans.find(
                   (plan) =>
-                    plan.date === new Date().toISOString().split("T")[0],
+                    plan.date === selectedDate,
                 ) || null
               }
               settings={settings}
@@ -1048,6 +1115,9 @@ export default function App() {
               onGenerateWithGemini={handleGenerateWithGemini}
               aiError={aiError}
               user={user}
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              onMoveTaskToTomorrow={handleMoveTaskToTomorrow}
             />
           )}
 

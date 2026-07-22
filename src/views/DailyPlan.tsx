@@ -10,9 +10,12 @@ interface DailyPlanProps {
   settings: UserSettings;
   onUpdatePlan: (plan: DailyPlan) => void;
   onCreatePlan: (date: string) => void;
-  onGenerateWithGemini: (tasks: string) => Promise<void>;
+  onGenerateWithGemini: (tasks: string, date: string) => Promise<void>;
   aiError?: string | null;
   user: User | null;
+  selectedDate: string;
+  onDateChange: (date: string) => void;
+  onMoveTaskToTomorrow?: (taskId: string, currentPlanDate: string) => void;
 }
 
 const formatTime = (timeStr: string | undefined): string => {
@@ -141,6 +144,9 @@ export default function DailyPlan({
   onGenerateWithGemini,
   aiError,
   user,
+  selectedDate,
+  onDateChange,
+  onMoveTaskToTomorrow,
 }: DailyPlanProps) {
   const [rawTasks, setRawTasks] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -345,7 +351,9 @@ export default function DailyPlan({
             details.push(formatTime(task.time));
           }
           if (task.priority && task.priority !== "medium") {
-            details.push(`${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)} Priority`);
+            details.push(
+              `${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)} Priority`,
+            );
           }
           if (details.length > 0) {
             taskLine += ` *(${details.join(", ")})*`;
@@ -428,6 +436,26 @@ export default function DailyPlan({
 
   const today = new Date().toISOString().split("T")[0];
 
+  const handlePrevDay = () => {
+    const [year, month, day] = selectedDate.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() - 1);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    onDateChange(`${y}-${m}-${d}`);
+  };
+
+  const handleNextDay = () => {
+    const [year, month, day] = selectedDate.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + 1);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    onDateChange(`${y}-${m}-${d}`);
+  };
+
   const handleToggleTask = (taskId: string) => {
     if (!dailyPlan) return;
 
@@ -472,12 +500,12 @@ export default function DailyPlan({
       if (!dailyPlan) {
         const newPlan: DailyPlan = {
           id: `plan_${Math.random().toString(36).slice(2, 9)}`,
-          date: today,
+          date: selectedDate,
           tasks: newTasks,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };
-        onCreatePlan(today);
+        onCreatePlan(selectedDate);
         onUpdatePlan(newPlan);
       } else {
         const updatedPlan = {
@@ -519,12 +547,12 @@ export default function DailyPlan({
         if (!dailyPlan) {
           const newPlan: DailyPlan = {
             id: `plan_${Math.random().toString(36).slice(2, 9)}`,
-            date: today,
+            date: selectedDate,
             tasks: newTasks,
             createdAt: Date.now(),
             updatedAt: Date.now(),
           };
-          onCreatePlan(today);
+          onCreatePlan(selectedDate);
           onUpdatePlan(newPlan);
         } else {
           const updatedPlan = {
@@ -548,7 +576,7 @@ export default function DailyPlan({
 
         setIsGenerating(true);
         try {
-          await onGenerateWithGemini(rawTasks);
+          await onGenerateWithGemini(rawTasks, selectedDate);
           setRawTasks("");
         } catch (error) {
           console.error("Failed to generate plan:", error);
@@ -680,12 +708,12 @@ export default function DailyPlan({
   const handleCreateEmptyPlan = () => {
     const newPlan: DailyPlan = {
       id: `plan_${Math.random().toString(36).slice(2, 9)}`,
-      date: today,
+      date: selectedDate,
       tasks: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    onCreatePlan(today);
+    onCreatePlan(selectedDate);
     onUpdatePlan(newPlan);
   };
 
@@ -741,30 +769,64 @@ export default function DailyPlan({
       <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-purple-500/[0.06] dark:bg-purple-500/[0.08] blur-[60px] pointer-events-none z-0 no-print" />
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header Section */}
-        {!dailyPlan ? (
-          <div className="text-center mb-8 pt-8">
-            <h1 className="text-4xl font-bold mb-2">Daily Planning</h1>
-            <p className="text-zinc-500 dark:text-gray-400">
-              Start your day with a clear plan
-            </p>
-          </div>
-        ) : (
-          <div className="mb-8 pt-8">
-            <div className="flex items-center justify-between mb-4">
-              <div>
+        <div className="mb-8 pt-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div>
+              <div className="flex items-center gap-3">
                 <h1 className="text-4xl font-bold text-zinc-900 dark:text-white">
                   Daily Plan
                 </h1>
-                <p className="text-gray-400">
-                  {new Date(dailyPlan.date).toLocaleDateString("en-US", {
+                {/* Date switcher controls */}
+                <div className="flex items-center gap-1.5 ml-2 no-print bg-white/50 dark:bg-black/30 border border-black/10 dark:border-white/5 rounded-xl p-1 backdrop-blur-sm shadow-sm">
+                  <button
+                    onClick={handlePrevDay}
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-zinc-650 dark:text-zinc-350 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer text-sm font-semibold flex items-center justify-center w-8 h-8"
+                    title="Previous Day"
+                  >
+                    ◀
+                  </button>
+                  <button
+                    onClick={() => onDateChange(today)}
+                    className="px-2.5 py-1.5 text-xs font-semibold bg-black/5 dark:bg-white/5 rounded-md hover:bg-black/10 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 cursor-pointer flex items-center gap-1"
+                    title="Jump to Today"
+                  >
+                    Today
+                  </button>
+                  <div className="relative flex items-center">
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => onDateChange(e.target.value)}
+                      className="opacity-0 absolute inset-0 cursor-pointer w-full h-full z-10"
+                    />
+                    <button className="px-2 py-1.5 text-xs font-semibold bg-black/5 dark:bg-white/5 rounded-md hover:bg-black/10 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 pointer-events-none flex items-center justify-center w-8 h-8">
+                      📅
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleNextDay}
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-zinc-650 dark:text-zinc-350 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer text-sm font-semibold flex items-center justify-center w-8 h-8"
+                    title="Next Day"
+                  >
+                    ▶
+                  </button>
+                </div>
+              </div>
+              <p className="text-gray-400 mt-1">
+                {new Date(selectedDate + "T00:00:00").toLocaleDateString(
+                  "en-US",
+                  {
                     weekday: "long",
                     year: "numeric",
                     month: "long",
                     day: "numeric",
-                  })}
-                </p>
-              </div>
-              <div className="text-right">
+                  },
+                )}
+              </p>
+            </div>
+
+            {dailyPlan && (
+              <div className="text-right flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-start gap-2 shrink-0">
                 <div className="text-3xl font-bold text-zinc-900 dark:text-white">
                   {completedTasks}/{totalTasks}
                 </div>
@@ -772,39 +834,42 @@ export default function DailyPlan({
                   {Math.round(progressPercentage)}% complete
                 </div>
               </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full bg-white/60 dark:bg-black/50 rounded-full h-3 no-print">
-              <div
-                className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-300"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-
-            {/* Action Bar */}
-            <div className="flex gap-3 mt-4 justify-end no-print">
-              <button
-                onClick={handlePrint}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border border-black/15 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-800/80 hover:border-black/25 dark:hover:border-gray-700 active:scale-95 flex items-center gap-2 cursor-pointer"
-              >
-                <span>🖨️</span> Print Plan
-              </button>
-              <button
-                onClick={handleExportMarkdown}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border border-black/15 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-800/80 hover:border-black/25 dark:hover:border-gray-700 active:scale-95 flex items-center gap-2 cursor-pointer"
-              >
-                <span>⬇️</span> Export MD
-              </button>
-              <button
-                onClick={() => setIsEmailModalOpen(true)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 bg-purple-600 hover:bg-purple-700 text-white border border-transparent shadow-md shadow-purple-900/20 active:scale-95 flex items-center gap-2 cursor-pointer"
-              >
-                <span>✉️</span> Email Plan
-              </button>
-            </div>
+            )}
           </div>
-        )}
+
+          {/* Progress Bar & Actions - only when plan exists */}
+          {dailyPlan && (
+            <>
+              <div className="w-full bg-white/60 dark:bg-black/50 rounded-full h-3 no-print">
+                <div
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+
+              <div className="flex gap-3 mt-4 justify-end no-print">
+                <button
+                  onClick={handlePrint}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border border-black/15 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-800/80 hover:border-black/25 dark:hover:border-gray-700 active:scale-95 flex items-center gap-2 cursor-pointer"
+                >
+                  <span>🖨️</span> Print Plan
+                </button>
+                <button
+                  onClick={handleExportMarkdown}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border border-black/15 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-800/80 hover:border-black/25 dark:hover:border-gray-700 active:scale-95 flex items-center gap-2 cursor-pointer"
+                >
+                  <span>⬇️</span> Export MD
+                </button>
+                <button
+                  onClick={() => setIsEmailModalOpen(true)}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 bg-purple-650 hover:bg-purple-750 text-white border border-transparent shadow-md shadow-purple-900/20 active:scale-95 flex items-center gap-2 cursor-pointer"
+                >
+                  <span>✉️</span> Email Plan
+                </button>
+              </div>
+            </>
+          )}
+        </div>
 
         {/* AI or MANUAL Generation */}
         <div className="mb-8 no-print">
@@ -1203,6 +1268,20 @@ export default function DailyPlan({
           </div>
         </div>
 
+        {/* Empty state message when there's no plan */}
+        {!dailyPlan && (
+          <div className="text-center py-8 px-6 bg-white/40 dark:bg-black/20 border border-dashed border-black/15 dark:border-white/5 rounded-2xl mb-8">
+            <div className="text-3xl mb-2">📅</div>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-1">
+              No plan for this day yet
+            </h3>
+            <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4 max-w-md mx-auto">
+              Start planning your day by adding tasks below or create an empty
+              plan.
+            </p>
+          </div>
+        )}
+
         {/* Tasks List - Grouped by Time */}
         {dailyPlan && (
           <div className="space-y-20">
@@ -1219,7 +1298,7 @@ export default function DailyPlan({
                     (task) => task.timeOfDay === "morning",
                   );
                   return morningTasks.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-3 mt-20">
                       <div className="flex items-center gap-3">
                         <h3 className="text-xl font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
                           🌅 Morning
@@ -1293,6 +1372,18 @@ export default function DailyPlan({
                                     {formatTime(task.time)}
                                   </span>
                                 )}
+                                <button
+                                  onClick={() =>
+                                    onMoveTaskToTomorrow?.(
+                                      task.id,
+                                      dailyPlan.date,
+                                    )
+                                  }
+                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center text-sm no-print"
+                                  title="Move to tomorrow"
+                                >
+                                  ➡️
+                                </button>
                                 <button
                                   onClick={() => handleOpenEditModal(task)}
                                   className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none no-print"
@@ -1397,6 +1488,18 @@ export default function DailyPlan({
                                   </span>
                                 )}
                                 <button
+                                  onClick={() =>
+                                    onMoveTaskToTomorrow?.(
+                                      task.id,
+                                      dailyPlan.date,
+                                    )
+                                  }
+                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center text-sm no-print"
+                                  title="Move to tomorrow"
+                                >
+                                  ➡️
+                                </button>
+                                <button
                                   onClick={() => handleOpenEditModal(task)}
                                   className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none no-print"
                                   title="Edit task"
@@ -1500,6 +1603,18 @@ export default function DailyPlan({
                                   </span>
                                 )}
                                 <button
+                                  onClick={() =>
+                                    onMoveTaskToTomorrow?.(
+                                      task.id,
+                                      dailyPlan.date,
+                                    )
+                                  }
+                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center text-sm no-print"
+                                  title="Move to tomorrow"
+                                >
+                                  ➡️
+                                </button>
+                                <button
                                   onClick={() => handleOpenEditModal(task)}
                                   className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none no-print"
                                   title="Edit task"
@@ -1602,6 +1717,18 @@ export default function DailyPlan({
                                     {formatTime(task.time)}
                                   </span>
                                 )}
+                                <button
+                                  onClick={() =>
+                                    onMoveTaskToTomorrow?.(
+                                      task.id,
+                                      dailyPlan.date,
+                                    )
+                                  }
+                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center text-sm no-print"
+                                  title="Move to tomorrow"
+                                >
+                                  ➡️
+                                </button>
                                 <button
                                   onClick={() => handleOpenEditModal(task)}
                                   className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none no-print"
@@ -1787,6 +1914,18 @@ export default function DailyPlan({
                   🗑️ Delete Task
                 </button>
                 <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (editingTask && dailyPlan) {
+                        onMoveTaskToTomorrow?.(editingTask.id, dailyPlan.date);
+                        setEditingTask(null);
+                      }
+                    }}
+                    className="px-4 py-2 border border-purple-200 dark:border-purple-800 text-purple-650 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 text-sm font-semibold rounded-xl hover:bg-purple-50 dark:hover:bg-purple-950/20 transition-colors cursor-pointer"
+                  >
+                    ➡️ Tomorrow
+                  </button>
                   <button
                     type="button"
                     onClick={() => setEditingTask(null)}
