@@ -38,8 +38,20 @@ export async function POST(request: Request) {
     }
 
     const email = decodedToken.email;
+    const emailVerified = decodedToken.email_verified;
+
     if (!email) {
       return NextResponse.json({ error: "Unauthorized: User token does not contain an email address" }, { status: 401 });
+    }
+
+    // A. Verify that the user's email is verified
+    if (!emailVerified) {
+      return NextResponse.json({ error: "Forbidden: Your email address must be verified to send plans." }, { status: 403 });
+    }
+
+    // B. Restrict strictly to gmail.com addresses
+    if (!email.toLowerCase().endsWith("@gmail.com")) {
+      return NextResponse.json({ error: "Forbidden: Only @gmail.com addresses are allowed to send plans." }, { status: 403 });
     }
 
     // 2. Validate Inputs
