@@ -81,7 +81,7 @@ export default function Editor({
   return (
     <main className="no-transition flex-1 h-full px-4 py-6 flex flex-col min-w-0 overflow-hidden">
       <div className="flex items-center gap-2 justify-between shrink-0">
-        <div className="flex items-center gap-2 w-full bg-zinc-200/80 dark:bg-zinc-800 rounded-5xl pr-4 pl-2">
+        <div className="flex items-center gap-2 w-full bg-zinc-200/80 dark:bg-zinc-800 pr-4 pl-2">
           {/* Panel Control Buttons Group */}
           <div className="flex items-center gap-1 bg-zinc-300/40 dark:bg-zinc-700/30 p-0.5 rounded-full mr-1">
             {onToggleSidebar && (
