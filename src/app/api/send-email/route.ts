@@ -58,8 +58,14 @@ export async function POST(request: Request) {
     try {
       const dateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
       const db = admin.firestore();
-      const userDoc = await db.collection("users").doc(decodedToken.uid).get();
-      const isPro = userDoc.exists && userDoc.data()?.isPro === true;
+      const subsSnapshot = await db
+        .collection("users")
+        .doc(decodedToken.uid)
+        .collection("subscriptions")
+        .where("status", "in", ["active", "trialing"])
+        .limit(1)
+        .get();
+      const isPro = !subsSnapshot.empty;
 
       if (!isPro) {
         const usageDocRef = db.collection("users").doc(decodedToken.uid).collection("dailyUsage").doc(dateStr);

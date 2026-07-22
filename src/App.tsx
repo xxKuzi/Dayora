@@ -20,7 +20,7 @@ import { initializeAI, getAIService } from "./services/ai";
 import { auth, db } from "./services/firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import type { User } from "firebase/auth";
-import { doc, getDoc, setDoc, writeBatch, collection, getDocs, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, writeBatch, collection, getDocs, onSnapshot, query as firestoreQuery, where } from "firebase/firestore";
 
 export default function App() {
   // ---- State ----
@@ -344,6 +344,7 @@ export default function App() {
     }
     let unsubUserDoc: (() => void) | null = null;
     let unsubUsageDoc: (() => void) | null = null;
+    let unsubSubsDoc: (() => void) | null = null;
 
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       // Clean up previous listeners if any
@@ -354,6 +355,10 @@ export default function App() {
       if (unsubUsageDoc) {
         unsubUsageDoc();
         unsubUsageDoc = null;
+      }
+      if (unsubSubsDoc) {
+        unsubSubsDoc();
+        unsubSubsDoc = null;
       }
 
       setUser(firebaseUser);
@@ -366,16 +371,20 @@ export default function App() {
           unsubUserDoc = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
               const data = docSnap.data();
-              setIsPro(!!data.isPro);
               if (data.settings) setSettings(data.settings);
               if (data.darkMode) setDarkMode(data.darkMode);
               if (data.comfortableTyping !== undefined && data.comfortableTyping !== null) {
                 setComfortableTyping(data.comfortableTyping);
               }
               if (data.cookiePreference) setCookiePreference(data.cookiePreference);
-            } else {
-              setIsPro(false);
             }
+          });
+
+          // Setup real-time listener for active subscriptions
+          const subsRef = collection(db!, "users", firebaseUser.uid, "subscriptions");
+          const subsQuery = firestoreQuery(subsRef, where("status", "in", ["active", "trialing"]));
+          unsubSubsDoc = onSnapshot(subsQuery, (snap) => {
+            setIsPro(!snap.empty);
           });
 
           // Setup real-time listener for daily usage document
@@ -514,6 +523,7 @@ export default function App() {
       unsub();
       if (unsubUserDoc) unsubUserDoc();
       if (unsubUsageDoc) unsubUsageDoc();
+      if (unsubSubsDoc) unsubSubsDoc();
     };
   }, [auth]);
 

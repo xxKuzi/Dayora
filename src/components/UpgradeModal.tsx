@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import type { User } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, collection, addDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../services/firebase";
 import Button from "./Button";
-import Input from "./Input";
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -21,10 +20,6 @@ export default function UpgradeModal({
   onSignInClick,
 }: UpgradeModalProps) {
   const [modalState, setModalState] = useState<ModalState>("benefits");
-  const [cardNumber, setCardNumber] = useState("4242 4242 4242 4242");
-  const [expiry, setExpiry] = useState("12/28");
-  const [cvc, setCvc] = useState("424");
-  const [cardName, setCardName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,14 +27,49 @@ export default function UpgradeModal({
   useEffect(() => {
     if (!isOpen) {
       setModalState("benefits");
-      setCardNumber("4242 4242 4242 4242");
-      setExpiry("12/28");
-      setCvc("424");
-      setCardName(user?.displayName || "");
       setError(null);
       setLoading(false);
     }
-  }, [isOpen, user]);
+  }, [isOpen]);
+
+  // Trigger Stripe Checkout doc creation when state changes to "checkout"
+  useEffect(() => {
+    if (modalState === "checkout" && user && db) {
+      setLoading(true);
+      setError(null);
+
+      const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID || "price_dummy";
+      const sessionsRef = collection(db, "users", user.uid, "checkout_sessions");
+      
+      let unsub: (() => void) | null = null;
+
+      addDoc(sessionsRef, {
+        price: priceId,
+        success_url: window.location.origin,
+        cancel_url: window.location.origin,
+      })
+        .then((docRef) => {
+          unsub = onSnapshot(docRef, (snap) => {
+            const data = snap.data();
+            if (data?.url) {
+              window.location.assign(data.url);
+            } else if (data?.error) {
+              setError(data.error.message || "Failed to create checkout session.");
+              setLoading(false);
+            }
+          });
+        })
+        .catch((err: any) => {
+          console.error("Error creating checkout session:", err);
+          setError(err.message || "Failed to initiate Stripe Checkout.");
+          setLoading(false);
+        });
+
+      return () => {
+        if (unsub) unsub();
+      };
+    }
+  }, [modalState, user]);
 
   // Handle escape key
   useEffect(() => {
@@ -55,27 +85,6 @@ export default function UpgradeModal({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
-  const handleCheckoutSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !db) return;
-    setLoading(true);
-    setError(null);
-
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    try {
-      const userDocRef = doc(db, "users", user.uid);
-      await setDoc(userDocRef, { isPro: true }, { merge: true });
-      setModalState("success");
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to upgrade user subscription.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSignInAndClose = () => {
     onClose();
@@ -200,112 +209,55 @@ export default function UpgradeModal({
         )}
 
         {isOpen && modalState === "checkout" && user && (
-          <form onSubmit={handleCheckoutSubmit} className="p-6 md:p-8 space-y-6">
-            <div className="space-y-1">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                💳 Secure checkout simulation
-              </h3>
-              <p className="text-xs text-zinc-400 leading-normal">
-                This is a mock billing form. Submit with test credit card details to simulated checkout completion.
-              </p>
-            </div>
-
-            {error && (
-              <div className="p-3 bg-red-950/40 border border-red-900/55 rounded-2xl text-xs text-red-400 leading-relaxed">
-                <strong>Error:</strong> {error}
-              </div>
+          <div className="p-6 md:p-8 space-y-6 text-center py-12 flex flex-col items-center justify-center">
+            {error ? (
+              <>
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/10 text-red-500 border border-red-500/30 text-3xl mb-4">
+                  ⚠️
+                </div>
+                <h3 className="text-xl font-bold text-white">Stripe Redirection Failed</h3>
+                <p className="text-sm text-zinc-400 max-w-sm leading-relaxed mt-2">
+                  {error}
+                </p>
+                <div className="flex gap-3 pt-6 w-full max-w-xs">
+                  <Button
+                    type="button"
+                    onClick={() => setModalState("benefits")}
+                    className="flex-1 justify-center py-2.5 !bg-transparent border border-zinc-800 hover:!bg-zinc-800/50 text-zinc-400 hover:text-white transition-all rounded-2xl cursor-pointer text-sm"
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setModalState("benefits");
+                      setTimeout(() => setModalState("checkout"), 100);
+                    }}
+                    className="flex-1 justify-center py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-2xl font-bold tracking-wide transition-all shadow-lg hover:shadow-purple-500/25 cursor-pointer text-sm"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin mb-6"></div>
+                <h3 className="text-xl font-bold text-white">Redirecting to Stripe Checkout</h3>
+                <p className="text-sm text-zinc-400 max-w-sm leading-relaxed mt-2">
+                  We are opening your secure billing session. Please complete payment on the checkout page to upgrade your account.
+                </p>
+                <div className="pt-6 w-full max-w-xs">
+                  <Button
+                    type="button"
+                    onClick={() => setModalState("benefits")}
+                    className="w-full justify-center py-2.5 !bg-transparent border border-zinc-800 hover:!bg-zinc-800/50 text-zinc-400 hover:text-white transition-all rounded-2xl cursor-pointer text-sm"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </>
             )}
-
-            {/* Simulated Checkout Inputs */}
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-zinc-400">Cardholder Name</label>
-                <Input
-                  required
-                  type="text"
-                  placeholder="e.g. Alex Mercer"
-                  value={cardName}
-                  onChange={(e) => setCardName(e.target.value)}
-                  className="!bg-zinc-950 border-zinc-800 text-white placeholder-zinc-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-zinc-400">Card Number</label>
-                <Input
-                  required
-                  type="text"
-                  placeholder="0000 0000 0000 0000"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
-                  className="!bg-zinc-950 border-zinc-800 text-white placeholder-zinc-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-zinc-400">Expiry Date</label>
-                  <Input
-                    required
-                    type="text"
-                    placeholder="MM/YY"
-                    value={expiry}
-                    onChange={(e) => setExpiry(e.target.value)}
-                    className="!bg-zinc-950 border-zinc-800 text-white placeholder-zinc-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-zinc-400">CVC</label>
-                  <Input
-                    required
-                    type="text"
-                    placeholder="123"
-                    value={cvc}
-                    onChange={(e) => setCvc(e.target.value)}
-                    className="!bg-zinc-950 border-zinc-800 text-white placeholder-zinc-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Billing details card representation */}
-            <div className="p-4 bg-zinc-950 rounded-2xl border border-zinc-800/80 flex items-center justify-between text-xs">
-              <div className="space-y-0.5">
-                <span className="text-zinc-500 uppercase font-semibold">Total Price Due:</span>
-                <p className="text-white font-bold text-sm">$2.99/mo</p>
-              </div>
-              <div className="flex gap-2">
-                <span className="text-zinc-500 font-bold border border-zinc-800 px-2 py-0.5 rounded">VISA</span>
-                <span className="text-zinc-500 font-bold border border-zinc-800 px-2 py-0.5 rounded">MC</span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3 pt-2">
-              <Button
-                type="button"
-                disabled={loading}
-                onClick={() => setModalState("benefits")}
-                className="flex-1 justify-center py-2.5 !bg-transparent border border-zinc-800 hover:!bg-zinc-800/50 text-zinc-400 hover:text-white transition-all rounded-2xl cursor-pointer text-sm"
-              >
-                Back
-              </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="flex-1 justify-center py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-2xl font-bold tracking-wide transition-all shadow-lg hover:shadow-purple-500/25 cursor-pointer text-sm"
-              >
-                {loading ? (
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    Processing...
-                  </span>
-                ) : (
-                  "Pay & Subscribe"
-                )}
-              </Button>
-            </div>
-          </form>
+          </div>
         )}
 
         {isOpen && modalState === "success" && (

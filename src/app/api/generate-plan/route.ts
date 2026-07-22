@@ -35,8 +35,14 @@ export async function POST(request: Request) {
 
       if (uid) {
         // Logged-in user limit: 3/day (unless Pro)
-        const userDoc = await db.collection("users").doc(uid).get();
-        const isPro = userDoc.exists && userDoc.data()?.isPro === true;
+        const subsSnapshot = await db
+          .collection("users")
+          .doc(uid)
+          .collection("subscriptions")
+          .where("status", "in", ["active", "trialing"])
+          .limit(1)
+          .get();
+        const isPro = !subsSnapshot.empty;
 
         const usageDocRef = db.collection("users").doc(uid).collection("dailyUsage").doc(dateStr);
         const usageDoc = await usageDocRef.get();
