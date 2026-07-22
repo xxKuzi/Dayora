@@ -200,3 +200,52 @@ textarea:focus-visible {
   font-size: 0.925rem;
   font-weight: 500;
 }
+
+/* Print Styles */
+@media print {
+  /* Hide sidebar, headers, controls, and generate forms */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset layout constraints to prevent print truncation and background waste */
+  html, body, #root, [class*="h-screen"] {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    background-image: none !important;
+    color: black !important;
+  }
+
+  .print-full-width {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .print-clean-container {
+    background: transparent !important;
+    background-image: none !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Style tasks nicely for printing */
+  .task-item {
+    background: white !important;
+    color: black !important;
+    border: 1px solid #e4e4e7 !important; /* zinc-200 */
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+
+  h1, h2, h3, p, span {
+    color: black !important;
+  }
+}
+

@@ -242,7 +242,8 @@ export default function DailyPlan({
 
     // Find the new target index in the modified tasks list
     const newTargetIndex = updatedTasks.findIndex((t) => t.id === targetTaskId);
-    const insertIndex = sourceIndex < targetIndex ? newTargetIndex + 1 : newTargetIndex;
+    const insertIndex =
+      sourceIndex < targetIndex ? newTargetIndex + 1 : newTargetIndex;
     updatedTasks.splice(insertIndex, 0, draggedTask);
 
     handleUpdatePlan({
@@ -305,6 +306,65 @@ export default function DailyPlan({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleExportMarkdown = () => {
+    if (!dailyPlan) return;
+
+    const formattedDate = new Date(dailyPlan.date).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    let markdown = `# Daily Plan - ${formattedDate}\n\n`;
+
+    const categories = [
+      { key: "morning", title: "Morning (6AM - 12PM)" },
+      { key: "midday", title: "Midday (12PM - 6PM)" },
+      { key: "evening", title: "Evening (6PM - 12AM)" },
+      { key: "untimed", title: "Untimed Tasks" },
+    ];
+
+    categories.forEach(({ key, title }) => {
+      const categoryTasks = dailyPlan.tasks.filter((t) => {
+        if (key === "untimed") {
+          return !t.timeOfDay;
+        }
+        return t.timeOfDay === key;
+      });
+
+      if (categoryTasks.length > 0) {
+        markdown += `## ${title}\n\n`;
+        categoryTasks.forEach((task) => {
+          const checkbox = task.completed ? "- [x]" : "- [ ]";
+          let taskLine = `${checkbox} ${task.text}`;
+          const details: string[] = [];
+          if (task.time) {
+            details.push(formatTime(task.time));
+          }
+          if (task.priority && task.priority !== "medium") {
+            details.push(`${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)} Priority`);
+          }
+          if (details.length > 0) {
+            taskLine += ` *(${details.join(", ")})*`;
+          }
+          markdown += `${taskLine}\n`;
+        });
+        markdown += "\n";
+      }
+    });
+
+    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `daily-plan-${dailyPlan.date}.md`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleSendEmail = async (e: React.FormEvent) => {
@@ -676,9 +736,9 @@ export default function DailyPlan({
     totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   return (
-    <div className="p-6 relative overflow-hidden bg-gradient-to-br from-[#e0f2fe] via-[#e0e7ff] to-[#f5f3ff] dark:from-[#0b1120] dark:via-[#1e1b4b] dark:to-[#090d16] text-zinc-800 dark:text-zinc-100 min-h-screen shrink-0">
-      <div className="absolute top-[-15%] left-[15%] w-[500px] h-[500px] rounded-full bg-indigo-500/[0.08] dark:bg-indigo-500/[0.12] blur-[50px] pointer-events-none z-0" />
-      <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-purple-500/[0.06] dark:bg-purple-500/[0.08] blur-[60px] pointer-events-none z-0" />
+    <div className="p-6 relative overflow-hidden bg-gradient-to-br from-[#e0f2fe] via-[#e0e7ff] to-[#f5f3ff] dark:from-[#0b1120] dark:via-[#1e1b4b] dark:to-[#090d16] text-zinc-800 dark:text-zinc-100 min-h-screen shrink-0 print-clean-container">
+      <div className="absolute top-[-15%] left-[15%] w-[500px] h-[500px] rounded-full bg-indigo-500/[0.08] dark:bg-indigo-500/[0.12] blur-[50px] pointer-events-none z-0 no-print" />
+      <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-purple-500/[0.06] dark:bg-purple-500/[0.08] blur-[60px] pointer-events-none z-0 no-print" />
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header Section */}
         {!dailyPlan ? (
@@ -715,7 +775,7 @@ export default function DailyPlan({
             </div>
 
             {/* Progress Bar */}
-            <div className="w-full bg-white/60 dark:bg-black/50 rounded-full h-3">
+            <div className="w-full bg-white/60 dark:bg-black/50 rounded-full h-3 no-print">
               <div
                 className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-300"
                 style={{ width: `${progressPercentage}%` }}
@@ -723,7 +783,7 @@ export default function DailyPlan({
             </div>
 
             {/* Action Bar */}
-            <div className="flex gap-3 mt-4 justify-end">
+            <div className="flex gap-3 mt-4 justify-end no-print">
               <button
                 onClick={handlePrint}
                 className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border border-black/15 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-800/80 hover:border-black/25 dark:hover:border-gray-700 active:scale-95 flex items-center gap-2 cursor-pointer"
@@ -731,8 +791,14 @@ export default function DailyPlan({
                 <span>🖨️</span> Print Plan
               </button>
               <button
+                onClick={handleExportMarkdown}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border border-black/15 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-800/80 hover:border-black/25 dark:hover:border-gray-700 active:scale-95 flex items-center gap-2 cursor-pointer"
+              >
+                <span>⬇️</span> Export MD
+              </button>
+              <button
                 onClick={() => setIsEmailModalOpen(true)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border border-purple-200 dark:border-purple-900/40 bg-purple-50 dark:bg-purple-950/20 text-purple-600 dark:text-purple-300 hover:text-purple-700 dark:hover:text-white hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:border-purple-300 dark:hover:border-purple-700/60 active:scale-95 flex items-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(168,85,247,0.02)] dark:shadow-[0_0_15px_rgba(168,85,247,0.05)] hover:shadow-[0_0_20px_rgba(168,85,247,0.1)] dark:hover:shadow-[0_0_20px_rgba(168,85,247,0.15)]"
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 bg-purple-600 hover:bg-purple-700 text-white border border-transparent shadow-md shadow-purple-900/20 active:scale-95 flex items-center gap-2 cursor-pointer"
               >
                 <span>✉️</span> Email Plan
               </button>
@@ -741,7 +807,7 @@ export default function DailyPlan({
         )}
 
         {/* AI or MANUAL Generation */}
-        <div className="mb-8">
+        <div className="mb-8 no-print">
           {/* Mode Switcher - Wide Segmented Tab Control */}
           <div className="w-full grid grid-cols-2 gap-2 p-1.5 bg-white/70 dark:bg-black/40 border border-black/10 dark:border-white/5 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-none mb-6 backdrop-blur-md">
             <button
@@ -843,20 +909,6 @@ export default function DailyPlan({
                   {!dailyPlan
                     ? "Fill in your tasks with priority and time preferences. Use the quick buttons (1-3) for time selection:"
                     : "Add more tasks to your plan. Fill in your tasks with priority and time preferences. Use the quick buttons (1-3) for time selection:"}
-                  <br />
-                  <span className="text-yellow-400">
-                    1 - Morning (6AM-12PM)
-                  </span>{" "}
-                  •
-                  <span className="text-orange-400">
-                    {" "}
-                    2 - Midday (12PM-6PM)
-                  </span>{" "}
-                  •
-                  <span className="text-purple-400">
-                    {" "}
-                    3 - Evening (6PM-12AM)
-                  </span>
                 </p>
 
                 <div className="space-y-3">
@@ -923,10 +975,10 @@ export default function DailyPlan({
                               )
                             }
                             title={time.title}
-                            className={`px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer ${
+                            className={`px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer border ${
                               task.timeOfDay === time.key
-                                ? getTimeOfDayColor(time.key)
-                                : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                                ? `${getTimeOfDayColor(time.key)} border-transparent`
+                                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 border-zinc-200/50 dark:border-zinc-700/50"
                             }`}
                           >
                             {time.label}
@@ -1044,7 +1096,7 @@ export default function DailyPlan({
                         className={`p-2 rounded-lg transition-all duration-200 flex items-center justify-center ${
                           isRecording
                             ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
-                            : "bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white border border-gray-600"
+                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700"
                         }`}
                         title={
                           isRecording ? "Stop recording" : "Record voice input"
@@ -1189,7 +1241,11 @@ export default function DailyPlan({
                         {morningTasks.map((task) => (
                           <div
                             key={task.id}
-                            style={{ viewTransitionName: `task-${task.id}` } as React.CSSProperties}
+                            style={
+                              {
+                                viewTransitionName: `task-${task.id}`,
+                              } as React.CSSProperties
+                            }
                             draggable
                             onDragStart={(e) => handleDragStart(e, task.id)}
                             onDragEnd={() => setDraggedTaskId(null)}
@@ -1199,11 +1255,11 @@ export default function DailyPlan({
                               task.completed
                                 ? "bg-green-50/80 dark:bg-green-950/20 border-green-200 dark:border-green-900/50"
                                 : "bg-white/85 dark:bg-black/55 border-black/20 dark:border-white/5 hover:border-black/35 dark:hover:border-white/10"
-                            } ${task.id === draggedTaskId ? "opacity-30 border-dashed border-zinc-400 dark:border-zinc-700" : ""}`}
+                            } ${task.id === draggedTaskId ? "opacity-30 border-dashed border-zinc-400 dark:border-zinc-700" : ""} task-item`}
                           >
                             <div className="flex items-start gap-3">
                               <div
-                                className="cursor-grab active:cursor-grabbing text-zinc-300 dark:text-zinc-700 hover:text-zinc-500 dark:hover:text-zinc-400 transition-colors p-0.5 shrink-0 flex items-center justify-center font-bold text-sm tracking-widest select-none self-center"
+                                className="cursor-grab active:cursor-grabbing text-zinc-300 dark:text-zinc-700 hover:text-zinc-500 dark:hover:text-zinc-400 transition-colors p-0.5 shrink-0 flex items-center justify-center font-bold text-sm tracking-widest select-none self-center no-print"
                                 title="Drag to reorder"
                               >
                                 ⠿
@@ -1239,7 +1295,7 @@ export default function DailyPlan({
                                 )}
                                 <button
                                   onClick={() => handleOpenEditModal(task)}
-                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none"
+                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none no-print"
                                   title="Edit task"
                                 >
                                   ⋮
@@ -1288,7 +1344,11 @@ export default function DailyPlan({
                         {middayTasks.map((task) => (
                           <div
                             key={task.id}
-                            style={{ viewTransitionName: `task-${task.id}` } as React.CSSProperties}
+                            style={
+                              {
+                                viewTransitionName: `task-${task.id}`,
+                              } as React.CSSProperties
+                            }
                             draggable
                             onDragStart={(e) => handleDragStart(e, task.id)}
                             onDragEnd={() => setDraggedTaskId(null)}
@@ -1298,11 +1358,11 @@ export default function DailyPlan({
                               task.completed
                                 ? "bg-green-50/80 dark:bg-green-950/20 border-green-200 dark:border-green-900/50"
                                 : "bg-white/85 dark:bg-black/55 border-black/20 dark:border-white/5 hover:border-black/35 dark:hover:border-white/10"
-                            } ${task.id === draggedTaskId ? "opacity-30 border-dashed border-zinc-400 dark:border-zinc-700" : ""}`}
+                            } ${task.id === draggedTaskId ? "opacity-30 border-dashed border-zinc-400 dark:border-zinc-700" : ""} task-item`}
                           >
                             <div className="flex items-start gap-3">
                               <div
-                                className="cursor-grab active:cursor-grabbing text-zinc-300 dark:text-zinc-700 hover:text-zinc-500 dark:hover:text-zinc-400 transition-colors p-0.5 shrink-0 flex items-center justify-center font-bold text-sm tracking-widest select-none self-center"
+                                className="cursor-grab active:cursor-grabbing text-zinc-300 dark:text-zinc-700 hover:text-zinc-500 dark:hover:text-zinc-400 transition-colors p-0.5 shrink-0 flex items-center justify-center font-bold text-sm tracking-widest select-none self-center no-print"
                                 title="Drag to reorder"
                               >
                                 ⠿
@@ -1338,7 +1398,7 @@ export default function DailyPlan({
                                 )}
                                 <button
                                   onClick={() => handleOpenEditModal(task)}
-                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none"
+                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none no-print"
                                   title="Edit task"
                                 >
                                   ⋮
@@ -1387,7 +1447,11 @@ export default function DailyPlan({
                         {eveningTasks.map((task) => (
                           <div
                             key={task.id}
-                            style={{ viewTransitionName: `task-${task.id}` } as React.CSSProperties}
+                            style={
+                              {
+                                viewTransitionName: `task-${task.id}`,
+                              } as React.CSSProperties
+                            }
                             draggable
                             onDragStart={(e) => handleDragStart(e, task.id)}
                             onDragEnd={() => setDraggedTaskId(null)}
@@ -1397,11 +1461,11 @@ export default function DailyPlan({
                               task.completed
                                 ? "bg-green-50/80 dark:bg-green-950/20 border-green-200 dark:border-green-900/50"
                                 : "bg-white/85 dark:bg-black/55 border-black/20 dark:border-white/5 hover:border-black/35 dark:hover:border-white/10"
-                            } ${task.id === draggedTaskId ? "opacity-30 border-dashed border-zinc-400 dark:border-zinc-700" : ""}`}
+                            } ${task.id === draggedTaskId ? "opacity-30 border-dashed border-zinc-400 dark:border-zinc-700" : ""} task-item`}
                           >
                             <div className="flex items-start gap-3">
                               <div
-                                className="cursor-grab active:cursor-grabbing text-zinc-300 dark:text-zinc-700 hover:text-zinc-500 dark:hover:text-zinc-400 transition-colors p-0.5 shrink-0 flex items-center justify-center font-bold text-sm tracking-widest select-none self-center"
+                                className="cursor-grab active:cursor-grabbing text-zinc-300 dark:text-zinc-700 hover:text-zinc-500 dark:hover:text-zinc-400 transition-colors p-0.5 shrink-0 flex items-center justify-center font-bold text-sm tracking-widest select-none self-center no-print"
                                 title="Drag to reorder"
                               >
                                 ⠿
@@ -1437,7 +1501,7 @@ export default function DailyPlan({
                                 )}
                                 <button
                                   onClick={() => handleOpenEditModal(task)}
-                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none"
+                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none no-print"
                                   title="Edit task"
                                 >
                                   ⋮
@@ -1486,7 +1550,11 @@ export default function DailyPlan({
                         {untimedTasks.map((task) => (
                           <div
                             key={task.id}
-                            style={{ viewTransitionName: `task-${task.id}` } as React.CSSProperties}
+                            style={
+                              {
+                                viewTransitionName: `task-${task.id}`,
+                              } as React.CSSProperties
+                            }
                             draggable
                             onDragStart={(e) => handleDragStart(e, task.id)}
                             onDragEnd={() => setDraggedTaskId(null)}
@@ -1496,11 +1564,11 @@ export default function DailyPlan({
                               task.completed
                                 ? "bg-green-50/80 dark:bg-green-950/20 border-green-200 dark:border-green-900/50"
                                 : "bg-white/85 dark:bg-black/55 border-black/20 dark:border-white/5 hover:border-black/35 dark:hover:border-white/10"
-                            } ${task.id === draggedTaskId ? "opacity-30 border-dashed border-zinc-400 dark:border-zinc-700" : ""}`}
+                            } ${task.id === draggedTaskId ? "opacity-30 border-dashed border-zinc-400 dark:border-zinc-700" : ""} task-item`}
                           >
                             <div className="flex items-start gap-3">
                               <div
-                                className="cursor-grab active:cursor-grabbing text-zinc-300 dark:text-zinc-700 hover:text-zinc-500 dark:hover:text-zinc-400 transition-colors p-0.5 shrink-0 flex items-center justify-center font-bold text-sm tracking-widest select-none self-center"
+                                className="cursor-grab active:cursor-grabbing text-zinc-300 dark:text-zinc-700 hover:text-zinc-500 dark:hover:text-zinc-400 transition-colors p-0.5 shrink-0 flex items-center justify-center font-bold text-sm tracking-widest select-none self-center no-print"
                                 title="Drag to reorder"
                               >
                                 ⠿
@@ -1536,7 +1604,7 @@ export default function DailyPlan({
                                 )}
                                 <button
                                   onClick={() => handleOpenEditModal(task)}
-                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none"
+                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none no-print"
                                   title="Edit task"
                                 >
                                   ⋮
@@ -1563,115 +1631,117 @@ export default function DailyPlan({
       </div>
 
       {/* Email Modal */}
-      {isEmailModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 transition-all duration-300">
-          <div
-            className="bg-white dark:bg-gray-950 border border-black/15 dark:border-gray-800/80 rounded-2xl p-6 max-w-md w-full shadow-[0_0_50px_rgba(168,85,247,0.15)] transform scale-100 transition-all duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                <span>✉️</span> Send Plan via Email
-              </h3>
+      <Modal
+        isOpen={isEmailModalOpen}
+        onClose={() => {
+          setIsEmailModalOpen(false);
+          setEmailStatus("idle");
+        }}
+        title="✉️ Send Plan via Email"
+        footer={
+          emailStatus === "success" ? (
+            <button
+              onClick={() => {
+                setIsEmailModalOpen(false);
+                setEmailStatus("idle");
+              }}
+              className="px-4 py-2 bg-black/5 dark:bg-zinc-800 hover:bg-black/10 dark:hover:bg-zinc-700 text-zinc-700 dark:text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+            >
+              Done
+            </button>
+          ) : !user ? (
+            <button
+              onClick={() => setIsEmailModalOpen(false)}
+              className="px-4 py-2 bg-black/5 dark:bg-zinc-800 hover:bg-black/10 dark:hover:bg-zinc-700 text-zinc-700 dark:text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+            >
+              Close
+            </button>
+          ) : (
+            <div className="flex justify-end gap-3 w-full">
               <button
+                type="button"
+                disabled={isSendingEmail}
                 onClick={() => {
                   setIsEmailModalOpen(false);
                   setEmailStatus("idle");
                 }}
-                className="text-zinc-500 dark:text-gray-400 hover:text-zinc-900 dark:hover:text-white transition-colors p-1 hover:bg-black/5 dark:hover:bg-gray-900 rounded-lg text-lg cursor-pointer"
+                className="px-4 py-2 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 text-sm font-semibold rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer disabled:opacity-50"
               >
-                ✕
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSendingEmail}
+                onClick={handleSendEmail}
+                className="px-5 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-md shadow-purple-950/20 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2 cursor-pointer"
+              >
+                {isSendingEmail ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    Sending...
+                  </>
+                ) : (
+                  "Send Plan"
+                )}
               </button>
             </div>
-
-            {emailStatus === "success" ? (
-              <div className="text-center py-6">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 text-green-500 dark:text-green-400 border border-green-500/30 text-3xl mb-4 animate-bounce">
-                  ✓
-                </div>
-                <h4 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
-                  Sent Successfully!
-                </h4>
-                <p className="text-zinc-600 dark:text-gray-400 text-sm">
-                  Your daily plan has been sent to {user?.email}.
-                </p>
-              </div>
-            ) : !user ? (
-              <div className="space-y-4">
-                <div className="p-4 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/30 rounded-xl text-center">
-                  <span className="text-3xl mb-2 block">🔒</span>
-                  <h4 className="text-base font-semibold text-purple-800 dark:text-purple-200 mb-1">
-                    Sign-In Required
-                  </h4>
-                  <p className="text-zinc-600 dark:text-gray-400 text-sm leading-relaxed">
-                    To prevent spam and protect email delivery limits, sending
-                    plans to email is restricted to signed-in accounts.
-                  </p>
-                </div>
-                <p className="text-zinc-500 dark:text-gray-400 text-xs text-center leading-normal">
-                  Please use the <strong>Sign In</strong> button in the left
-                  sidebar to authenticate, then try again.
-                </p>
-                <div className="flex justify-end pt-2">
-                  <button
-                    onClick={() => setIsEmailModalOpen(false)}
-                    className="px-4 py-2 bg-black/5 dark:bg-gray-800 hover:bg-black/10 dark:hover:bg-gray-700 text-zinc-700 dark:text-white rounded-xl text-sm font-medium transition-colors cursor-pointer"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <form onSubmit={handleSendEmail} className="space-y-4">
-                <p className="text-zinc-600 dark:text-gray-400 text-sm leading-relaxed">
-                  We will send your daily plan format to your registered account
-                  email:
-                </p>
-
-                {emailStatus === "error" && (
-                  <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/30 rounded-xl">
-                    <p className="text-red-600 dark:text-red-400 text-xs leading-normal">
-                      <strong>Failed to send:</strong> {emailErrorMsg}
-                    </p>
-                  </div>
-                )}
-
-                <div className="p-4 bg-black/5 dark:bg-gray-900/60 border border-black/10 dark:border-gray-800 rounded-xl text-center text-purple-600 dark:text-purple-300 font-medium tracking-wide">
-                  {user.email}
-                </div>
-
-                <div className="flex justify-end gap-3 pt-3">
-                  <button
-                    type="button"
-                    disabled={isSendingEmail}
-                    onClick={() => {
-                      setIsEmailModalOpen(false);
-                      setEmailStatus("idle");
-                    }}
-                    className="px-4 py-2 bg-transparent hover:bg-black/5 dark:hover:bg-gray-900 border border-black/10 dark:border-gray-800 hover:border-black/20 dark:hover:border-gray-700 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:hover:text-white rounded-xl text-sm font-medium transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSendingEmail}
-                    className="px-5 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-md shadow-purple-950/20 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2 cursor-pointer"
-                  >
-                    {isSendingEmail ? (
-                      <>
-                        <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                        Sending...
-                      </>
-                    ) : (
-                      "Send Plan"
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
+          )
+        }
+      >
+        {emailStatus === "success" ? (
+          <div className="text-center py-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 text-green-500 dark:text-green-400 border border-green-500/30 text-3xl mb-4 animate-bounce">
+              ✓
+            </div>
+            <h4 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+              Sent Successfully!
+            </h4>
+            <p className="text-zinc-650 dark:text-gray-400 text-sm">
+              Your daily plan has been sent to{" "}
+              <strong className="text-zinc-800 dark:text-zinc-200">
+                {user?.email}
+              </strong>
+              .
+            </p>
           </div>
-        </div>
-      )}
+        ) : !user ? (
+          <div className="space-y-4">
+            <div className="p-4 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40 rounded-xl text-center">
+              <span className="text-3xl mb-2 block">🔒</span>
+              <h4 className="text-base font-semibold text-purple-800 dark:text-purple-300 mb-1">
+                Sign-In Required
+              </h4>
+              <p className="text-zinc-650 dark:text-gray-300 text-sm leading-relaxed">
+                To prevent spam and protect email delivery limits, sending plans
+                to email is restricted to signed-in accounts.
+              </p>
+            </div>
+            <p className="text-zinc-550 dark:text-gray-400 text-xs text-center leading-normal">
+              Please use the <strong>Sign In</strong> button in the left sidebar
+              to authenticate, then try again.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4 pt-1">
+            <p className="text-zinc-650 dark:text-gray-300 text-sm leading-relaxed">
+              We will send your daily plan format to your registered account
+              email:
+            </p>
+
+            {emailStatus === "error" && (
+              <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-xl">
+                <p className="text-red-650 dark:text-red-400 text-xs leading-normal">
+                  <strong>Failed to send:</strong> {emailErrorMsg}
+                </p>
+              </div>
+            )}
+
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-center text-purple-650 dark:text-purple-400 font-bold tracking-wide text-sm">
+              {user.email}
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Edit Task Modal */}
       <Modal
@@ -1747,7 +1817,7 @@ export default function DailyPlan({
               value={editTaskText}
               onChange={(e) => setEditTaskText(e.target.value)}
               placeholder="Task name..."
-              className="w-full bg-white dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white"
+              className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white"
             />
           </div>
 

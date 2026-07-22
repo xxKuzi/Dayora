@@ -860,7 +860,7 @@ export default function App() {
     <div className={"w-full h-screen flex " + (isDark ? "dark" : "")}>
       {/* Fixed Toggle Buttons - Top Right Corner */}
       {(activeView !== "notes" || !activeNote) && (
-        <div className="fixed top-2 right-4 z-50 flex items-center gap-2">
+        <div className="fixed top-2 right-4 z-50 flex items-center gap-2 no-print">
           {(!sidebarVisible || !notesListVisible) && (
             /* Comfortable Typing Button - only when panels are hidden */
             <Button
@@ -915,7 +915,7 @@ export default function App() {
 
       <div className="w-full h-full flex text-zinc-900 dark:text-zinc-100">
         {sidebarVisible && (
-          <div className="fixed left-0 top-0 h-screen bg-zinc-100 dark:bg-zinc-950 z-10">
+          <div className="fixed left-0 top-0 h-screen bg-zinc-100 dark:bg-zinc-950 z-10 no-print">
             <Sidebar
               folders={folders}
               activeFolderId={activeFolderId}
@@ -938,7 +938,7 @@ export default function App() {
 
         {/* Main Content Area */}
         <div
-          className={`flex-1 h-screen flex flex-col overflow-y-auto bg-transparent ${
+          className={`flex-1 h-screen flex flex-col overflow-y-auto bg-transparent print-full-width ${
             activeView === "notes"
               ? notesListVisible
                 ? sidebarVisible
