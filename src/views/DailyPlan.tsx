@@ -1110,6 +1110,7 @@ export default function DailyPlan({
                       <div className="w-6 flex justify-center">
                         {tableTasks.length > 1 && (
                           <button
+                            tabIndex={-1}
                             onClick={() => handleRemoveTableTask(index)}
                             className="text-red-400 hover:text-red-300 cursor-pointer"
                           >
@@ -1236,6 +1237,7 @@ export default function DailyPlan({
                         />
                         {tableTasks.length > 1 && (
                           <button
+                            tabIndex={-1}
                             onClick={() => handleRemoveTableTask(index)}
                             className="text-zinc-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 ml-2 cursor-pointer transition-colors"
                           >
