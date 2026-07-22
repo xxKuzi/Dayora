@@ -957,60 +957,6 @@ export default function App() {
 
   return (
     <div className={"w-full h-screen flex " + (isDark ? "dark" : "")}>
-      {/* Fixed Toggle Buttons - Top Right Corner */}
-      {(activeView !== "notes" || !activeNote) && (
-        <div className="fixed top-2 right-4 z-50 flex items-center gap-2 no-print">
-          {(!sidebarVisible || !notesListVisible) && (
-            /* Comfortable Typing Button - only when panels are hidden */
-            <Button
-              onClick={() => setComfortableTyping(!comfortableTyping)}
-              title={`${
-                comfortableTyping ? "Disable" : "Enable"
-              } Comfortable Typing`}
-              size="sm"
-              className="!bg-gray-600 hover:!bg-gray-700 !text-white !border-gray-500 hover:!scale-100 !rounded-full !w-8 !h-8 !p-0 flex items-center justify-center"
-            >
-              <div className="relative w-4 h-4 flex items-center justify-center">
-                {comfortableTyping ? (
-                  <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
-                ) : (
-                  <div className="absolute inset-0 rounded-full border-2 border-white"></div>
-                )}
-              </div>
-            </Button>
-          )}
-          <Button
-            onClick={handleToggleAllPanels}
-            title={`${
-              sidebarVisible || notesListVisible ? "Hide" : "Show"
-            } All Panels`}
-            size="sm"
-            className="!bg-blue-600 hover:!bg-blue-700 !text-white !border-blue-500 hover:!scale-100"
-          >
-            {sidebarVisible || notesListVisible ? "◀◀" : "▶▶"}
-          </Button>
-          {(sidebarVisible || notesListVisible) && (
-            <>
-              <Button
-                onClick={() => setSidebarVisible(!sidebarVisible)}
-                title={`${sidebarVisible ? "Hide" : "Show"} Sidebar (Ctrl/Cmd+B)`}
-                size="sm"
-              >
-                {sidebarVisible ? "◀" : "▶"}
-              </Button>
-              <Button
-                onClick={() => setNotesListVisible(!notesListVisible)}
-                title={`${
-                  notesListVisible ? "Hide" : "Show"
-                } Notes List (Ctrl/Cmd+N)`}
-                size="sm"
-              >
-                {notesListVisible ? "◀" : "▶"}
-              </Button>
-            </>
-          )}
-        </div>
-      )}
 
       <div className="w-full h-full flex text-zinc-900 dark:text-zinc-100">
         {sidebarVisible && (

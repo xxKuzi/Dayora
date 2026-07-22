@@ -1270,14 +1270,13 @@ export default function DailyPlan({
 
         {/* Empty state message when there's no plan */}
         {!dailyPlan && (
-          <div className="text-center py-8 px-6 bg-white/40 dark:bg-black/20 border border-dashed border-black/15 dark:border-white/5 rounded-2xl mb-8">
+          <div className="text-center pb-4 pt-8 px-6 bg-white/40 dark:bg-black/20 border border-dashed border-black/15 dark:border-white/5 rounded-2xl mb-8">
             <div className="text-3xl mb-2">📅</div>
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-1">
               No plan for this day yet
             </h3>
             <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4 max-w-md mx-auto">
-              Start planning your day by adding tasks below or create an empty
-              plan.
+              Start planning your day by adding tasks below plan.
             </p>
           </div>
         )}
@@ -1875,6 +1874,21 @@ export default function DailyPlan({
         isOpen={editingTask !== null}
         onClose={() => setEditingTask(null)}
         title="Edit Task"
+        headerActions={
+          editingTask &&
+          dailyPlan && (
+            <button
+              type="button"
+              onClick={() => {
+                onMoveTaskToTomorrow?.(editingTask.id, dailyPlan.date);
+                setEditingTask(null);
+              }}
+              className="px-2.5 py-1 text-xs border border-purple-200 dark:border-purple-800/60 text-purple-650 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-colors font-semibold flex items-center gap-1 cursor-pointer"
+            >
+              ➡️ Tomorrow
+            </button>
+          )
+        }
         footer={
           <div className="flex items-center justify-between w-full">
             {showDeleteConfirm ? (
@@ -1914,18 +1928,6 @@ export default function DailyPlan({
                   🗑️ Delete Task
                 </button>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (editingTask && dailyPlan) {
-                        onMoveTaskToTomorrow?.(editingTask.id, dailyPlan.date);
-                        setEditingTask(null);
-                      }
-                    }}
-                    className="px-4 py-2 border border-purple-200 dark:border-purple-800 text-purple-650 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 text-sm font-semibold rounded-xl hover:bg-purple-50 dark:hover:bg-purple-950/20 transition-colors cursor-pointer"
-                  >
-                    ➡️ Tomorrow
-                  </button>
                   <button
                     type="button"
                     onClick={() => setEditingTask(null)}
