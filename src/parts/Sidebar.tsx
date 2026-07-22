@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import type { Folder, Note } from "../types";
 import { countInFolder } from "../utils";
 import { Button } from "../components";
@@ -42,6 +43,13 @@ export default function Sidebar({
   isPro = false,
   onUpgradeClick,
 }: SidebarProps) {
+  const [isMac, setIsMac] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsMac(/Mac|iPod|iPhone|iPad/.test(navigator.userAgent || navigator.platform));
+    }
+  }, []);
+
   const regularFolders = folders.filter(
     (f) => f.id !== trashId && f.name !== "Trash",
   );
@@ -54,22 +62,35 @@ export default function Sidebar({
       {/* Top: Navigation */}
       <div className="space-y-1 mb-4">
         {[
-          { id: "notes", label: "📝 Notes", icon: "📄" },
-          { id: "daily-plan", label: "📅 Daily Plan", icon: "🎯" },
-          { id: "settings", label: "⚙️ Settings", icon: "🔧" },
-        ].map((view) => (
-          <button
-            key={view.id}
-            onClick={() => onViewChange(view.id as any)}
-            className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-all ${
-              activeView === view.id
-                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md dark:bg-none dark:bg-blue-600 dark:text-white"
-                : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
-            }`}
-          >
-            {view.label}
-          </button>
-        ))}
+          { id: "notes", label: "📝 Notes", icon: "📄", key: "A" },
+          { id: "daily-plan", label: "📅 Daily Plan", icon: "🎯", key: "S" },
+          { id: "settings", label: "⚙️ Settings", icon: "🔧", key: "D" },
+        ].map((view) => {
+          const shortcut = isMac ? `⌘${view.key}` : `Ctrl+${view.key}`;
+          return (
+            <button
+              key={view.id}
+              onClick={() => onViewChange(view.id as any)}
+              title={`Switch to ${view.id === "daily-plan" ? "Daily Plan" : view.id.charAt(0).toUpperCase() + view.id.slice(1)} (${shortcut})`}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg font-medium transition-all ${
+                activeView === view.id
+                  ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md dark:bg-none dark:bg-blue-600 dark:text-white"
+                  : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/70 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
+              }`}
+            >
+              <span>{view.label}</span>
+              <kbd
+                className={`text-[10px] px-1.5 py-0.5 rounded font-mono border transition-colors ${
+                  activeView === view.id
+                    ? "bg-white/20 border-white/20 text-white"
+                    : "bg-zinc-200/60 dark:bg-zinc-800/60 border-zinc-300/40 dark:border-zinc-700/40 text-zinc-400 dark:text-zinc-500"
+                }`}
+              >
+                {shortcut}
+              </kbd>
+            </button>
+          );
+        })}
       </div>
 
       {/* Middle Content Area */}

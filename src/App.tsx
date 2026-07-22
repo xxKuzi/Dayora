@@ -10,7 +10,13 @@ import type {
   UserSettings,
   CookiePreference,
 } from "./types";
-import { Button, CookieBanner, FolderModal, AuthModal, UpgradeModal } from "./components";
+import {
+  Button,
+  CookieBanner,
+  FolderModal,
+  AuthModal,
+  UpgradeModal,
+} from "./components";
 import type { FolderModalType } from "./components/FolderModal";
 import { nid, fid, deriveTitleFromBody, load, save } from "./utils";
 import { Sidebar, NotesList } from "./parts";
@@ -20,7 +26,17 @@ import { initializeAI, getAIService } from "./services/ai";
 import { auth, db } from "./services/firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import type { User } from "firebase/auth";
-import { doc, getDoc, setDoc, writeBatch, collection, getDocs, onSnapshot, query as firestoreQuery, where } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  writeBatch,
+  collection,
+  getDocs,
+  onSnapshot,
+  query as firestoreQuery,
+  where,
+} from "firebase/firestore";
 
 export default function App() {
   // ---- State ----
@@ -33,7 +49,10 @@ export default function App() {
 
   // Monetization limits states
   const [isPro, setIsPro] = useState<boolean>(false);
-  const [dailyUsage, setDailyUsage] = useState<{ emailCount: number; aiCount: number }>({ emailCount: 0, aiCount: 0 });
+  const [dailyUsage, setDailyUsage] = useState<{
+    emailCount: number;
+    aiCount: number;
+  }>({ emailCount: 0, aiCount: 0 });
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState<boolean>(false);
   const [anonAiCount, setAnonAiCount] = useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -249,8 +268,11 @@ export default function App() {
     const database = db;
     if (user) {
       if (isSynced && database) {
-        setDoc(doc(database, "users", user.uid), { darkMode }, { merge: true })
-          .catch((err) => console.error("Error syncing darkMode:", err));
+        setDoc(
+          doc(database, "users", user.uid),
+          { darkMode },
+          { merge: true },
+        ).catch((err) => console.error("Error syncing darkMode:", err));
       }
     } else if (cookiePreference !== "declined") {
       localStorage.setItem("dayora_dark_mode", darkMode);
@@ -271,8 +293,13 @@ export default function App() {
     const database = db;
     if (user) {
       if (isSynced && database) {
-        setDoc(doc(database, "users", user.uid), { comfortableTyping }, { merge: true })
-          .catch((err) => console.error("Error syncing comfortableTyping:", err));
+        setDoc(
+          doc(database, "users", user.uid),
+          { comfortableTyping },
+          { merge: true },
+        ).catch((err) =>
+          console.error("Error syncing comfortableTyping:", err),
+        );
       }
     } else if (cookiePreference !== "declined") {
       localStorage.setItem(
@@ -282,10 +309,34 @@ export default function App() {
     }
   }, [comfortableTyping, cookiePreference, user, isSynced]);
 
-  // Keyboard shortcuts for toggling sections
+  // Keyboard shortcuts for toggling sections and switching views
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle sidebar or notes list
       if (e.ctrlKey || e.metaKey) {
+        // Only trigger view-switching shortcuts if the user is NOT typing in an input/textarea
+        const isEditing = document.activeElement && (
+          document.activeElement.tagName === "INPUT" ||
+          document.activeElement.tagName === "TEXTAREA" ||
+          document.activeElement.getAttribute("contenteditable") === "true"
+        );
+
+        if (!isEditing) {
+          if (e.key === "a" || e.key === "A") {
+            e.preventDefault();
+            setActiveView("notes");
+            return;
+          } else if (e.key === "s" || e.key === "S") {
+            e.preventDefault();
+            setActiveView("daily-plan");
+            return;
+          } else if (e.key === "d" || e.key === "D") {
+            e.preventDefault();
+            setActiveView("settings");
+            return;
+          }
+        }
+
         switch (e.key) {
           case "b":
             e.preventDefault();
@@ -297,11 +348,32 @@ export default function App() {
             break;
         }
       }
+
+      // Switch views: Alt + A/S/D or Ctrl + Shift + A/S/D (works even when editing)
+      if (
+        (e.altKey && !e.ctrlKey && !e.metaKey) ||
+        (e.ctrlKey && e.shiftKey && !e.metaKey)
+      ) {
+        const isNotesKey = e.code === "KeyA" || e.key.toLowerCase() === "a" || e.key === "å";
+        const isPlanKey = e.code === "KeyS" || e.key.toLowerCase() === "s" || e.key === "ß";
+        const isSettingsKey = e.code === "KeyD" || e.key.toLowerCase() === "d" || e.key === "∂";
+
+        if (isNotesKey) {
+          e.preventDefault();
+          setActiveView("notes");
+        } else if (isPlanKey) {
+          e.preventDefault();
+          setActiveView("daily-plan");
+        } else if (isSettingsKey) {
+          e.preventDefault();
+          setActiveView("settings");
+        }
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [setActiveView]);
 
   // Ensure Trash folder exists once and migrate notes without folderId
   useEffect(() => {
@@ -373,23 +445,41 @@ export default function App() {
               const data = docSnap.data();
               if (data.settings) setSettings(data.settings);
               if (data.darkMode) setDarkMode(data.darkMode);
-              if (data.comfortableTyping !== undefined && data.comfortableTyping !== null) {
+              if (
+                data.comfortableTyping !== undefined &&
+                data.comfortableTyping !== null
+              ) {
                 setComfortableTyping(data.comfortableTyping);
               }
-              if (data.cookiePreference) setCookiePreference(data.cookiePreference);
+              if (data.cookiePreference)
+                setCookiePreference(data.cookiePreference);
             }
           });
 
           // Setup real-time listener for active subscriptions
-          const subsRef = collection(db!, "users", firebaseUser.uid, "subscriptions");
-          const subsQuery = firestoreQuery(subsRef, where("status", "in", ["active", "trialing"]));
+          const subsRef = collection(
+            db!,
+            "users",
+            firebaseUser.uid,
+            "subscriptions",
+          );
+          const subsQuery = firestoreQuery(
+            subsRef,
+            where("status", "in", ["active", "trialing"]),
+          );
           unsubSubsDoc = onSnapshot(subsQuery, (snap) => {
             setIsPro(!snap.empty);
           });
 
           // Setup real-time listener for daily usage document
           const dateStr = new Date().toISOString().split("T")[0];
-          const usageDocRef = doc(db!, "users", firebaseUser.uid, "dailyUsage", dateStr);
+          const usageDocRef = doc(
+            db!,
+            "users",
+            firebaseUser.uid,
+            "dailyUsage",
+            dateStr,
+          );
           unsubUsageDoc = onSnapshot(usageDocRef, (docSnap) => {
             if (docSnap.exists()) {
               const data = docSnap.data();
@@ -402,17 +492,26 @@ export default function App() {
             }
           });
 
-          const foldersSnap = await getDocs(collection(db!, "users", firebaseUser.uid, "folders"));
-          const notesSnap = await getDocs(collection(db!, "users", firebaseUser.uid, "notes"));
-          const plansSnap = await getDocs(collection(db!, "users", firebaseUser.uid, "dailyPlans"));
+          const foldersSnap = await getDocs(
+            collection(db!, "users", firebaseUser.uid, "folders"),
+          );
+          const notesSnap = await getDocs(
+            collection(db!, "users", firebaseUser.uid, "notes"),
+          );
+          const plansSnap = await getDocs(
+            collection(db!, "users", firebaseUser.uid, "dailyPlans"),
+          );
 
           const userDocSnap = await getDoc(userDocRef);
-          const dbSettings = userDocSnap.exists() ? userDocSnap.data().settings : null;
+          const dbSettings = userDocSnap.exists()
+            ? userDocSnap.data().settings
+            : null;
           const dbFolders = foldersSnap.docs.map((doc) => doc.data() as Folder);
           const dbNotes = notesSnap.docs.map((doc) => doc.data() as Note);
           const dbPlans = plansSnap.docs.map((doc) => doc.data() as DailyPlan);
 
-          const hasFirestoreData = dbFolders.length > 0 || dbNotes.length > 0 || !!dbSettings;
+          const hasFirestoreData =
+            dbFolders.length > 0 || dbNotes.length > 0 || !!dbSettings;
 
           if (hasFirestoreData) {
             if (dbFolders.length > 0) setFolders(dbFolders);
@@ -432,13 +531,19 @@ export default function App() {
             });
 
             folders.forEach((f) => {
-              batch.set(doc(db!, "users", firebaseUser.uid, "folders", f.id), f);
+              batch.set(
+                doc(db!, "users", firebaseUser.uid, "folders", f.id),
+                f,
+              );
             });
             notes.forEach((n) => {
               batch.set(doc(db!, "users", firebaseUser.uid, "notes", n.id), n);
             });
             dailyPlans.forEach((plan) => {
-              batch.set(doc(db!, "users", firebaseUser.uid, "dailyPlans", plan.id), plan);
+              batch.set(
+                doc(db!, "users", firebaseUser.uid, "dailyPlans", plan.id),
+                plan,
+              );
             });
 
             await batch.commit();
@@ -453,7 +558,9 @@ export default function App() {
           lastSyncedFoldersRef.current = hasFirestoreData ? dbFolders : folders;
           lastSyncedNotesRef.current = hasFirestoreData ? dbNotes : notes;
           lastSyncedPlansRef.current = hasFirestoreData ? dbPlans : dailyPlans;
-          lastSyncedSettingsRef.current = hasFirestoreData ? dbSettings || settings : settings;
+          lastSyncedSettingsRef.current = hasFirestoreData
+            ? dbSettings || settings
+            : settings;
 
           setIsSynced(true);
         } catch (error) {
@@ -551,7 +658,9 @@ export default function App() {
       toDelete.forEach((lf) => {
         batch.delete(doc(database, "users", user.uid, "folders", lf.id));
       });
-      batch.commit().catch((err) => console.error("Error syncing folders:", err));
+      batch
+        .commit()
+        .catch((err) => console.error("Error syncing folders:", err));
     }
   }, [folders, user, isSynced]);
 
@@ -624,7 +733,9 @@ export default function App() {
       toDelete.forEach((lp) => {
         batch.delete(doc(database, "users", user.uid, "dailyPlans", lp.id));
       });
-      batch.commit().catch((err) => console.error("Error syncing dailyPlans:", err));
+      batch
+        .commit()
+        .catch((err) => console.error("Error syncing dailyPlans:", err));
     }
   }, [dailyPlans, user, isSynced]);
 
@@ -637,8 +748,11 @@ export default function App() {
 
     if (JSON.stringify(currentSettings) !== JSON.stringify(lastSettings)) {
       lastSyncedSettingsRef.current = currentSettings;
-      setDoc(doc(database, "users", user.uid), { settings: currentSettings }, { merge: true })
-        .catch((err) => console.error("Error syncing settings:", err));
+      setDoc(
+        doc(database, "users", user.uid),
+        { settings: currentSettings },
+        { merge: true },
+      ).catch((err) => console.error("Error syncing settings:", err));
     }
   }, [settings, user, isSynced]);
 
@@ -917,7 +1031,9 @@ export default function App() {
       const limit = isPro ? 20 : 3;
       if (dailyUsage.aiCount >= limit) {
         if (isPro) {
-          setAiError("You have reached your Pro daily limit of 20 AI prompts. Limits reset daily.");
+          setAiError(
+            "You have reached your Pro daily limit of 20 AI prompts. Limits reset daily.",
+          );
         } else {
           setIsUpgradeModalOpen(true);
         }
@@ -933,10 +1049,14 @@ export default function App() {
     try {
       setAiError(null);
       const aiService = getAIService();
-      
+
       // Get Bearer token if logged in
       const token = user ? await user.getIdToken() : undefined;
-      const generatedPlan = await aiService.generateDailyPlan(tasks, settings, token);
+      const generatedPlan = await aiService.generateDailyPlan(
+        tasks,
+        settings,
+        token,
+      );
 
       const existingPlan = dailyPlans.find((plan) => plan.date === date);
 
@@ -963,13 +1083,20 @@ export default function App() {
         const nextAnonCount = anonAiCount + 1;
         setAnonAiCount(nextAnonCount);
         const dateStr = new Date().toISOString().split("T")[0];
-        localStorage.setItem("dayora_anon_usage", JSON.stringify({ date: dateStr, aiCount: nextAnonCount }));
+        localStorage.setItem(
+          "dayora_anon_usage",
+          JSON.stringify({ date: dateStr, aiCount: nextAnonCount }),
+        );
       }
     } catch (error: any) {
       console.error("AI generation failed:", error);
-      
+
       // Open UpgradeModal if limit exceeded error matches
-      if (error instanceof Error && (error.message.includes("LIMIT_EXCEEDED") || error.message.includes("limit"))) {
+      if (
+        error instanceof Error &&
+        (error.message.includes("LIMIT_EXCEEDED") ||
+          error.message.includes("limit"))
+      ) {
         setIsUpgradeModalOpen(true);
       }
 
@@ -991,7 +1118,9 @@ export default function App() {
       const d = String(date.getDate()).padStart(2, "0");
       const tomorrowDate = `${y}-${m}-${d}`;
 
-      const currentPlan = dailyPlans.find((plan) => plan.date === currentPlanDate);
+      const currentPlan = dailyPlans.find(
+        (plan) => plan.date === currentPlanDate,
+      );
       if (!currentPlan) return;
 
       const taskToMove = currentPlan.tasks.find((task) => task.id === taskId);
@@ -1003,7 +1132,9 @@ export default function App() {
         updatedAt: Date.now(),
       };
 
-      const tomorrowPlan = dailyPlans.find((plan) => plan.date === tomorrowDate);
+      const tomorrowPlan = dailyPlans.find(
+        (plan) => plan.date === tomorrowDate,
+      );
       let updatedTomorrowPlan: DailyPlan;
       if (tomorrowPlan) {
         updatedTomorrowPlan = {
@@ -1066,7 +1197,6 @@ export default function App() {
 
   return (
     <div className={"w-full h-screen flex " + (isDark ? "dark" : "")}>
-
       <div className="w-full h-full flex text-zinc-900 dark:text-zinc-100">
         {sidebarVisible && (
           <div className="fixed left-0 top-0 h-screen bg-zinc-100 dark:bg-zinc-950 z-10 no-print">
@@ -1161,10 +1291,7 @@ export default function App() {
           {activeView === "daily-plan" && (
             <DailyPlanComponent
               dailyPlan={
-                dailyPlans.find(
-                  (plan) =>
-                    plan.date === selectedDate,
-                ) || null
+                dailyPlans.find((plan) => plan.date === selectedDate) || null
               }
               settings={settings}
               onUpdatePlan={handleUpdateDailyPlan}
