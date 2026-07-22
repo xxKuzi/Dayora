@@ -142,25 +142,7 @@ export default function Sidebar({
                 </span>
               </div>
 
-              {activeFolderId !== trashFolder.id && activeFolderId !== "f-all" && (
-                <div className="flex items-center space-x-2 pt-1">
-                  <Button
-                    onClick={() => onRenameFolder(activeFolderId)}
-                    size="sm"
-                    className="flex-1"
-                  >
-                    Rename
-                  </Button>
-                  <Button
-                    onClick={() => onDeleteFolder(activeFolderId)}
-                    variant="danger"
-                    size="sm"
-                    className="flex-1"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              )}
+
             </div>
           </div>
         )}

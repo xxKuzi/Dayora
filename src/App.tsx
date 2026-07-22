@@ -937,19 +937,23 @@ export default function App() {
         {/* Main Content Area */}
         <div
           className={`flex-1 h-screen flex flex-col bg-black/d0 ${
-            activeView === "notes" && notesListVisible
-              ? sidebarVisible
-                ? "ml-[560px]"
-                : comfortableTyping
-                  ? "ml-[400px]"
-                  : "ml-80"
+            activeView === "notes"
+              ? notesListVisible
+                ? sidebarVisible
+                  ? "ml-[560px]"
+                  : comfortableTyping
+                    ? "ml-[400px]"
+                    : "ml-80"
+                : sidebarVisible
+                  ? comfortableTyping
+                    ? "ml-80"
+                    : "ml-60"
+                  : comfortableTyping
+                    ? "ml-20"
+                    : ""
               : sidebarVisible
-                ? comfortableTyping
-                  ? "ml-80"
-                  : "ml-60"
-                : comfortableTyping
-                  ? "ml-20"
-                  : ""
+                ? "ml-60"
+                : ""
           }`}
         >
           {activeView === "notes" && (
