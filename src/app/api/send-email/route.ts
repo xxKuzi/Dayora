@@ -166,7 +166,7 @@ export async function POST(request: Request) {
 
     // 5. Send email via Resend
     const { data, error } = await resend.emails.send({
-      from: "Dayora App <onboarding@resend.dev>",
+      from: process.env.RESEND_FROM_EMAIL || "Dayora App <onboarding@resend.dev>",
       to: email,
       subject: `Your Plan for ${date} (${completedCount}/${totalCount} completed)`,
       html: emailHtml,
