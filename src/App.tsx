@@ -109,7 +109,15 @@ export default function App() {
   });
   const [activeView, setActiveView] = useState<
     "notes" | "daily-plan" | "settings"
-  >("notes");
+  >(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.replace("#", "");
+      if (hash === "notes" || hash === "daily-plan" || hash === "settings") {
+        return hash as "notes" | "daily-plan" | "settings";
+      }
+    }
+    return "notes";
+  });
   const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>(
     initial?.dailyPlans ?? [],
   );
@@ -185,6 +193,30 @@ export default function App() {
 
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  // Synchronize activeView with URL Hash
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const currentHash = window.location.hash.replace("#", "");
+    if (currentHash !== activeView) {
+      window.location.hash = activeView;
+    }
+  }, [activeView]);
+
+  // Listen to browser back/forward (hashchange) events
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (hash === "notes" || hash === "daily-plan" || hash === "settings") {
+        setActiveView(hash);
+      }
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
   // Save dark mode preference to local storage or Firestore when it changes
