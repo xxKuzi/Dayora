@@ -46,7 +46,9 @@ export default function Sidebar({
   const [isMac, setIsMac] = useState(false);
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setIsMac(/Mac|iPod|iPhone|iPad/.test(navigator.userAgent || navigator.platform));
+      setIsMac(
+        /Mac|iPod|iPhone|iPad/.test(navigator.userAgent || navigator.platform),
+      );
     }
   }, []);
 
@@ -170,8 +172,6 @@ export default function Sidebar({
                   {countInFolder(trashFolder.id, notes, folders, trashId)}
                 </span>
               </div>
-
-
             </div>
           </div>
         )}
@@ -206,8 +206,27 @@ export default function Sidebar({
             title={`Toggle theme mode (currently ${darkMode})`}
             className="px-2.5 py-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-xs transition-colors border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-center gap-1 cursor-pointer font-medium text-zinc-700 dark:text-zinc-300"
           >
-            <span>{darkMode === "light" ? "☀ Light" : darkMode === "dark" ? "☾ Dark" : "🌓 Auto"}</span>
+            <span>
+              {darkMode === "light"
+                ? "☀ Light"
+                : darkMode === "dark"
+                  ? "☾ Dark"
+                  : "🌓 Auto"}
+            </span>
           </button>
+        </div>
+
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Feedback
+          </span>
+          <a
+            href="mailto:juicyy.developer@gmail.com?subject=Dayora%20Feedback&body=Hi%20Dayora%20Team%2C%0A%0AI%20have%20some%20feedback%20about%20the%20app%3A%0A%0A"
+            title="Send us feedback via email"
+            className="px-2.5 py-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-xs transition-colors border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-center gap-1 cursor-pointer font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            <span>Send Feedback</span>
+          </a>
         </div>
 
         {user ? (
@@ -222,7 +241,9 @@ export default function Sidebar({
                   />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                    {(user.displayName || user.email || "?").charAt(0).toUpperCase()}
+                    {(user.displayName || user.email || "?")
+                      .charAt(0)
+                      .toUpperCase()}
                   </div>
                 )}
                 <div className="flex flex-col min-w-0">

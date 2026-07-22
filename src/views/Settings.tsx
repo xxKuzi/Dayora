@@ -36,7 +36,7 @@ export default function Settings({
 
   const handleMealTimeChange = (
     meal: keyof UserSettings["mealTimes"],
-    time: string
+    time: string,
   ) => {
     onUpdateSettings({
       ...settings,
@@ -118,7 +118,7 @@ export default function Settings({
       goals: settings.goals.map((g) =>
         g.id === goalId
           ? { ...g, progress: Math.max(0, Math.min(100, progress)) }
-          : g
+          : g,
       ),
     });
   };
@@ -142,34 +142,57 @@ export default function Settings({
       }[settings.userType]
     : "Configure your profile";
 
-  const mealsCount = settings?.mealTimes 
-    ? Object.values(settings.mealTimes).filter(Boolean).length 
+  const mealsCount = settings?.mealTimes
+    ? Object.values(settings.mealTimes).filter(Boolean).length
     : 0;
-  const scheduleDesc = mealsCount > 0 
-    ? `Meals: ${mealsCount} scheduled`
-    : "No meals scheduled";
+  const scheduleDesc =
+    mealsCount > 0 ? `Meals: ${mealsCount} scheduled` : "No meals scheduled";
 
   const habitsList = settings?.habits || [];
   const habitCount = habitsList.length;
-  const maxStreak = habitCount > 0 ? Math.max(0, ...habitsList.map((h) => h.streak || 0)) : 0;
-  const habitsDesc = habitCount > 0 
-    ? `${habitCount} Habit${habitCount > 1 ? "s" : ""}`
-    : "Create a routine";
+  const maxStreak =
+    habitCount > 0 ? Math.max(0, ...habitsList.map((h) => h.streak || 0)) : 0;
+  const habitsDesc =
+    habitCount > 0
+      ? `${habitCount} Habit${habitCount > 1 ? "s" : ""}`
+      : "Create a routine";
 
   const goalsList = settings?.goals || [];
   const goalCount = goalsList.length;
-  const completedGoals = goalsList.filter((g) => g.completed || g.progress === 100).length;
-  const avgProgress = goalCount > 0 
-    ? Math.round(goalsList.reduce((acc, curr) => acc + (curr.progress || 0), 0) / goalCount) 
-    : 0;
-  const goalsDesc = goalCount > 0 
-    ? `${goalCount} Goal${goalCount > 1 ? "s" : ""}`
-    : "Define your targets";
+  const completedGoals = goalsList.filter(
+    (g) => g.completed || g.progress === 100,
+  ).length;
+  const avgProgress =
+    goalCount > 0
+      ? Math.round(
+          goalsList.reduce((acc, curr) => acc + (curr.progress || 0), 0) /
+            goalCount,
+        )
+      : 0;
+  const goalsDesc =
+    goalCount > 0
+      ? `${goalCount} Goal${goalCount > 1 ? "s" : ""}`
+      : "Define your targets";
+
+  const habitsNames = habitsList.slice(0, 3).map((h) => h.name).join(", ");
+  const habitsSummaryText = habitCount > 3
+    ? `${habitsNames} (+${habitCount - 3} more)`
+    : habitsNames || "No routines configured yet";
+
+  const goalsProgressList = goalsList.slice(0, 2).map((g) => `${g.title} (${g.progress}%)`).join(", ");
+  const goalsSummaryText = goalCount > 2
+    ? `${goalsProgressList} (+${goalCount - 2} more)`
+    : goalsProgressList || "No goals defined yet";
+
+  const workHoursText = (settings?.userType === "student" || settings?.userType === "worker")
+    ? ` • ${settings?.userType === "student" ? "School" : "Work"}: ${settings?.workHours?.start || "N/A"} - ${settings?.workHours?.end || "N/A"}`
+    : "";
+  const scheduleDetailsText = `Breakfast: ${settings?.mealTimes?.breakfast || "N/A"} • Lunch: ${settings?.mealTimes?.lunch || "N/A"} • Dinner: ${settings?.mealTimes?.dinner || "N/A"}${workHoursText}`;
 
   return (
     <div className="p-6 bg-gray-900 text-white min-h-screen shrink-0">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8 pt-8">
+        <div className={`mb-8 pt-8 ${!isEditing ? "text-center" : ""}`}>
           <h1 className="text-4xl font-bold text-white mb-2">Settings</h1>
           <p className="text-gray-400">
             Customize your daily schedule, habits, and goals
@@ -177,70 +200,104 @@ export default function Settings({
         </div>
 
         {!isEditing ? (
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/40 backdrop-blur-md border border-gray-700/50 rounded-3xl p-8 shadow-2xl space-y-8">
-              <div className="flex items-center gap-4 border-b border-gray-700/60 pb-6">
-                <div className="p-3 bg-purple-500/10 rounded-2xl text-purple-400 text-2xl border border-purple-500/20">
-                  ⚙️
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">Settings Summary</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Your daily profile, schedule, habits, and goals overview</p>
-                </div>
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-zinc-950/20 backdrop-blur-xl border border-zinc-800/80 rounded-[2rem] p-10 md:p-12 space-y-12 shadow-2xl">
+              <div className="space-y-2 pb-2">
+                <span className="text-xs tracking-[0.2em] uppercase font-bold text-purple-400">overview</span>
+                <h2 className="text-3xl font-semibold tracking-tight text-white">Your Setup at a Glance</h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
                 {/* Profile */}
-                <div className="space-y-1 group cursor-pointer" onClick={() => { setActiveTab("profile"); setIsEditing(true); }}>
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-purple-400">
-                    <span>👤</span> Profile Type
+                <div
+                  className="space-y-2.5 group cursor-pointer"
+                  onClick={() => {
+                    setActiveTab("profile");
+                    setIsEditing(true);
+                  }}
+                >
+                  <div className="w-6 h-0.5 bg-purple-500 rounded-full transition-all group-hover:w-10 duration-300" />
+                  <div className="text-xs font-bold tracking-[0.2em] uppercase text-zinc-500">
+                    Profile Type
                   </div>
-                  <div className="text-white font-bold text-lg group-hover:text-purple-300 transition-colors">{profileLabel}</div>
-                  <div className="text-xs text-gray-400">{profileDesc}</div>
+                  <div className="text-2xl font-medium text-white group-hover:text-purple-300 transition-colors">
+                    {profileLabel}
+                  </div>
+                  <div className="text-sm text-zinc-300 leading-relaxed font-normal">
+                    {profileDesc}
+                  </div>
                 </div>
 
                 {/* Schedule */}
-                <div className="space-y-1 group cursor-pointer" onClick={() => { setActiveTab("schedule"); setIsEditing(true); }}>
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-400">
-                    <span>⏰</span> Daily Schedule
+                <div
+                  className="space-y-2.5 group cursor-pointer"
+                  onClick={() => {
+                    setActiveTab("schedule");
+                    setIsEditing(true);
+                  }}
+                >
+                  <div className="w-6 h-0.5 bg-blue-500 rounded-full transition-all group-hover:w-10 duration-300" />
+                  <div className="text-xs font-bold tracking-[0.2em] uppercase text-zinc-500">
+                    Daily Schedule
                   </div>
-                  <div className="text-white font-bold text-lg group-hover:text-blue-300 transition-colors">{scheduleDesc}</div>
-                  <div className="text-xs text-gray-400">
-                    B: {settings?.mealTimes?.breakfast || "N/A"} • L: {settings?.mealTimes?.lunch || "N/A"} • D: {settings?.mealTimes?.dinner || "N/A"}
+                  <div className="text-2xl font-medium text-white group-hover:text-blue-300 transition-colors">
+                    {scheduleDesc}
+                  </div>
+                  <div className="text-sm text-zinc-300 leading-relaxed font-normal">
+                    {scheduleDetailsText}
                   </div>
                 </div>
 
                 {/* Habits */}
-                <div className="space-y-1 group cursor-pointer" onClick={() => { setActiveTab("habits"); setIsEditing(true); }}>
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
-                    <span>🎯</span> Tracked Habits
+                <div
+                  className="space-y-2.5 group cursor-pointer"
+                  onClick={() => {
+                    setActiveTab("habits");
+                    setIsEditing(true);
+                  }}
+                >
+                  <div className="w-6 h-0.5 bg-emerald-500 rounded-full transition-all group-hover:w-10 duration-300" />
+                  <div className="text-xs font-bold tracking-[0.2em] uppercase text-zinc-500">
+                    Tracked Habits
                   </div>
-                  <div className="text-white font-bold text-lg group-hover:text-emerald-300 transition-colors">{habitsDesc}</div>
-                  <div className="text-xs text-gray-400">
-                    {habitCount > 0 ? `Max streak: ${maxStreak} days` : "Start building habits"}
+                  <div className="text-2xl font-medium text-white group-hover:text-emerald-300 transition-colors">
+                    {habitsDesc}
+                  </div>
+                  <div className="text-sm text-zinc-300 leading-relaxed font-normal">
+                    {habitsSummaryText}
+                    {habitCount > 0 && <span className="block mt-1.5 text-xs text-zinc-500">Max streak: {maxStreak} days</span>}
                   </div>
                 </div>
 
                 {/* Goals */}
-                <div className="space-y-1 group cursor-pointer" onClick={() => { setActiveTab("goals"); setIsEditing(true); }}>
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-400">
-                    <span>🏆</span> Core Goals
+                <div
+                  className="space-y-2.5 group cursor-pointer"
+                  onClick={() => {
+                    setActiveTab("goals");
+                    setIsEditing(true);
+                  }}
+                >
+                  <div className="w-6 h-0.5 bg-amber-500 rounded-full transition-all group-hover:w-10 duration-300" />
+                  <div className="text-xs font-bold tracking-[0.2em] uppercase text-zinc-500">
+                    Core Goals
                   </div>
-                  <div className="text-white font-bold text-lg group-hover:text-amber-300 transition-colors">{goalsDesc}</div>
-                  <div className="text-xs text-gray-400">
-                    {goalCount > 0 ? `${completedGoals} of ${goalCount} completed` : "Track long-term goals"}
+                  <div className="text-2xl font-medium text-white group-hover:text-amber-300 transition-colors">
+                    {goalsDesc}
+                  </div>
+                  <div className="text-sm text-zinc-300 leading-relaxed font-normal">
+                    {goalsSummaryText}
+                    {goalCount > 0 && <span className="block mt-1.5 text-xs text-zinc-500">{completedGoals} of {goalCount} completed • Avg: {avgProgress}%</span>}
                   </div>
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-gray-700/60 flex justify-center">
+              <div className="pt-8 border-t border-zinc-800/80 flex justify-start">
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="w-full px-6 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-purple-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 group cursor-pointer"
+                  className="px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700/80 text-zinc-100 hover:text-white text-[11px] font-bold uppercase tracking-[0.15em] rounded-xl border border-zinc-700/50 transition-all duration-300 hover:scale-[1.01] flex items-center gap-2 cursor-pointer shadow-md"
                 >
-                  <span>✏️</span>
-                  <span>Edit Configuration & Routines</span>
-                  <span className="group-hover:translate-x-1 transition-transform duration-200">→</span>
+                  <span>Edit Configuration</span>
+                  <span>→</span>
                 </button>
               </div>
             </div>
@@ -253,7 +310,9 @@ export default function Settings({
                 onClick={() => setIsEditing(false)}
                 className="flex items-center gap-2 text-sm font-semibold text-purple-400 hover:text-purple-300 transition-colors cursor-pointer group"
               >
-                <span className="group-hover:-translate-x-1 transition-transform duration-200">←</span>
+                <span className="group-hover:-translate-x-1 transition-transform duration-200">
+                  ←
+                </span>
                 Back to Overview
               </button>
               <button
@@ -325,7 +384,7 @@ export default function Settings({
                             key={type.value}
                             onClick={() =>
                               handleUserTypeChange(
-                                type.value as UserSettings["userType"]
+                                type.value as UserSettings["userType"],
                               )
                             }
                             className={`p-4 rounded-lg border-2 transition-all text-left ${
@@ -346,18 +405,20 @@ export default function Settings({
                     </div>
                     <div className="mt-6 p-4 bg-gray-700/50 rounded-lg">
                       <p className="text-sm text-gray-300">
-                        <span className="font-medium text-white">Selected:</span>{" "}
+                        <span className="font-medium text-white">
+                          Selected:
+                        </span>{" "}
                         {settings.userType === "kid"
                           ? "🧒 Kid"
                           : settings.userType === "student"
-                          ? "🎓 Student"
-                          : settings.userType === "worker"
-                          ? "💼 Worker"
-                          : "🏖️ Retired"}
+                            ? "🎓 Student"
+                            : settings.userType === "worker"
+                              ? "💼 Worker"
+                              : "🏖️ Retired"}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
-                        This helps personalize your daily planning experience and
-                        task suggestions.
+                        This helps personalize your daily planning experience
+                        and task suggestions.
                       </p>
                     </div>
                   </div>
@@ -470,7 +531,10 @@ export default function Settings({
                     <Textarea
                       value={newHabit.description}
                       onChange={(e) =>
-                        setNewHabit({ ...newHabit, description: e.target.value })
+                        setNewHabit({
+                          ...newHabit,
+                          description: e.target.value,
+                        })
                       }
                       placeholder="Description (optional)"
                       className="min-h-[80px]"
@@ -511,7 +575,9 @@ export default function Settings({
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-white">{habit.name}</h4>
+                          <h4 className="font-semibold text-white">
+                            {habit.name}
+                          </h4>
                           {habit.description && (
                             <p className="text-sm text-gray-400 mt-1">
                               {habit.description}
@@ -571,7 +637,10 @@ export default function Settings({
                           type="date"
                           value={newGoal.targetDate}
                           onChange={(e) =>
-                            setNewGoal({ ...newGoal, targetDate: e.target.value })
+                            setNewGoal({
+                              ...newGoal,
+                              targetDate: e.target.value,
+                            })
                           }
                         />
                       </div>
@@ -610,7 +679,9 @@ export default function Settings({
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-white">{goal.title}</h4>
+                          <h4 className="font-semibold text-white">
+                            {goal.title}
+                          </h4>
                           {goal.description && (
                             <p className="text-sm text-gray-400 mt-1">
                               {goal.description}
@@ -648,7 +719,10 @@ export default function Settings({
                           <Button
                             size="sm"
                             onClick={() =>
-                              handleUpdateGoalProgress(goal.id, goal.progress - 10)
+                              handleUpdateGoalProgress(
+                                goal.id,
+                                goal.progress - 10,
+                              )
                             }
                             disabled={goal.progress <= 0}
                           >
@@ -657,7 +731,10 @@ export default function Settings({
                           <Button
                             size="sm"
                             onClick={() =>
-                              handleUpdateGoalProgress(goal.id, goal.progress + 10)
+                              handleUpdateGoalProgress(
+                                goal.id,
+                                goal.progress + 10,
+                              )
                             }
                             disabled={goal.progress >= 100}
                           >
