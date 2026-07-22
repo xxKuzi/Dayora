@@ -6,5 +6,4 @@ export { default as CookieBanner } from "./CookieBanner";
 export { default as Modal } from "./Modal";
 export { default as FolderModal } from "./FolderModal";
 export { default as AuthModal } from "./AuthModal";
-
-
+export { default as UpgradeModal } from "./UpgradeModal";

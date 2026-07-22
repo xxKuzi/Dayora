@@ -25,12 +25,14 @@ export interface AIGeneratedPlan {
 class AIService {
   async generateDailyPlan(
     rawTasks: string,
-    userSettings?: any
+    userSettings?: any,
+    token?: string
   ): Promise<AIGeneratedPlan> {
     const response = await fetch("/api/generate-plan", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({ rawTasks, userSettings }),
     });

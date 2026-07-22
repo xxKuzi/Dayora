@@ -54,6 +54,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden: Only @gmail.com addresses are allowed to send plans." }, { status: 403 });
     }
 
+    // C. Verify daily email limits (1 email/day for non-pro, unlimited for Pro)
+    try {
+      const dateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+      const db = admin.firestore();
+      const userDoc = await db.collection("users").doc(decodedToken.uid).get();
+      const isPro = userDoc.exists && userDoc.data()?.isPro === true;
+
+      if (!isPro) {
+        const usageDocRef = db.collection("users").doc(decodedToken.uid).collection("dailyUsage").doc(dateStr);
+        const usageDoc = await usageDocRef.get();
+        const usageData = usageDoc.data() || { emailCount: 0 };
+        const emailCount = usageData.emailCount || 0;
+
+        if (emailCount >= 10) {
+          return NextResponse.json(
+            {
+              error: "EMAIL_LIMIT_EXCEEDED",
+              message: "You have reached your daily limit of 10 emails. Upgrade to Pro for unlimited emails.",
+            },
+            { status: 403 }
+          );
+        }
+
+        await usageDocRef.set(
+          {
+            emailCount: admin.firestore.FieldValue.increment(1),
+          },
+          { merge: true }
+        );
+      }
+    } catch (dbError) {
+      console.error("Firestore email limits validation failed, bypassing check:", dbError);
+    }
+
     // 2. Validate Inputs
     const { date, tasks } = (await request.json()) as {
       date: string;

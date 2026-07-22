@@ -16,6 +16,10 @@ interface DailyPlanProps {
   selectedDate: string;
   onDateChange: (date: string) => void;
   onMoveTaskToTomorrow?: (taskId: string, currentPlanDate: string) => void;
+  isPro?: boolean;
+  dailyUsage?: { emailCount: number; aiCount: number };
+  anonAiCount?: number;
+  onUpgradeClick?: () => void;
 }
 
 const formatTime = (timeStr: string | undefined): string => {
@@ -147,6 +151,10 @@ export default function DailyPlan({
   selectedDate,
   onDateChange,
   onMoveTaskToTomorrow,
+  isPro = false,
+  dailyUsage = { emailCount: 0, aiCount: 0 },
+  anonAiCount = 0,
+  onUpgradeClick,
 }: DailyPlanProps) {
   const [rawTasks, setRawTasks] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -309,6 +317,11 @@ export default function DailyPlan({
     "idle",
   );
   const [emailErrorMsg, setEmailErrorMsg] = useState("");
+
+  const isGmailUser =
+    user?.email?.toLowerCase().endsWith("@gmail.com") ?? false;
+  const isEmailVerified = user?.emailVerified ?? false;
+  const isEmailRestricted = user ? !isGmailUser || !isEmailVerified : false;
 
   const handlePrint = () => {
     window.print();
@@ -970,10 +983,10 @@ export default function DailyPlan({
             {!useAIMode ? (
               // Manual mode - always show table
               <>
-                <p className="text-gray-400 mb-20">
+                <p className="text-gray-400 mb-10">
                   {!dailyPlan
-                    ? "Fill in your tasks with priority and time preferences. Use the quick buttons (1-3) for time selection:"
-                    : "Add more tasks to your plan. Fill in your tasks with priority and time preferences. Use the quick buttons (1-3) for time selection:"}
+                    ? "Fill in your tasks with priority and time preferences. Use the quick buttons (1-3) for time selection."
+                    : "Add more tasks to your plan. Fill in your tasks with priority and time preferences. Use the quick buttons (1-3) for time selection."}
                 </p>
 
                 <div className="space-y-3">
@@ -1117,7 +1130,7 @@ export default function DailyPlan({
             ) : !useTableMode ? (
               // AI Text mode
               <>
-                <p className="text-gray-400 mb-20">
+                <p className="text-gray-400 mb-10">
                   {!dailyPlan
                     ? "Describe what you need to do today."
                     : "Add more tasks to your plan."}
@@ -1193,7 +1206,7 @@ export default function DailyPlan({
             ) : (
               // AI Table mode (Cells mode)
               <>
-                <p className="text-zinc-500 dark:text-gray-400 mb-20">
+                <p className="text-zinc-500 dark:text-gray-400 mb-10">
                   Fill in your tasks using the input cells. Format:{" "}
                   <code>[Task] - [Time] - [Priority]</code>
                 </p>
@@ -1242,7 +1255,7 @@ export default function DailyPlan({
               </>
             )}
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex flex-col gap-2 mt-6">
               <Button
                 onClick={handleGeneratePlan}
                 disabled={
@@ -1264,6 +1277,30 @@ export default function DailyPlan({
                       ? "✨ Add Tasks to Plan"
                       : "✨ Generate Smart Plan"}
               </Button>
+
+              {useAIMode && (
+                <div className="text-center mt-1">
+                  {isPro ? (
+                    <span className="text-xs text-purple-400 font-semibold flex items-center gap-1 justify-center">
+                      ✨ Pro Member: Unlimited AI plan generation
+                    </span>
+                  ) : user ? (
+                    <span className={`text-xs font-semibold ${20 - (dailyUsage?.aiCount || 0) <= 0 ? "text-purple-400" : "text-zinc-500 dark:text-gray-400"}`}>
+                      {20 - (dailyUsage?.aiCount || 0) > 0 
+                        ? `✨ ${20 - (dailyUsage?.aiCount || 0)} of 20 free daily AI prompts remaining`
+                        : "⚠️ Daily limit reached. Go Pro to continue!"
+                      }
+                    </span>
+                  ) : (
+                    <span className={`text-xs font-semibold ${1 - anonAiCount <= 0 ? "text-purple-400" : "text-zinc-500 dark:text-gray-400"}`}>
+                      {1 - anonAiCount > 0 
+                        ? `✨ ${1 - anonAiCount} of 1 free daily AI prompt remaining`
+                        : "⚠️ Limit reached. Sign in for 20 free prompts, or go Pro!"
+                      }
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1775,7 +1812,7 @@ export default function DailyPlan({
             >
               Done
             </button>
-          ) : !user ? (
+          ) : !user || isEmailRestricted || (!isPro && (dailyUsage?.emailCount ?? 0) >= 10) ? (
             <button
               onClick={() => setIsEmailModalOpen(false)}
               className="px-4 py-2 bg-black/5 dark:bg-zinc-800 hover:bg-black/10 dark:hover:bg-zinc-700 text-zinc-700 dark:text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer"
@@ -1846,6 +1883,65 @@ export default function DailyPlan({
               Please use the <strong>Sign In</strong> button in the left sidebar
               to authenticate, then try again.
             </p>
+          </div>
+        ) : isEmailRestricted ? (
+          <div className="space-y-4">
+            <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-xl text-center">
+              <span className="text-3xl mb-2 block">⚠️</span>
+              <h4 className="text-base font-semibold text-red-800 dark:text-red-300 mb-1">
+                Gmail Account Required
+              </h4>
+              <p className="text-zinc-600 dark:text-gray-300 text-sm leading-relaxed">
+                For security and spam prevention, sending daily plans via email
+                is restricted to verified <strong>Gmail (@gmail.com)</strong>{" "}
+                accounts.
+              </p>
+            </div>
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700/60 rounded-xl text-center text-xs space-y-2">
+              <p className="text-zinc-600 dark:text-gray-300 font-medium">
+                Current email: <strong>{user?.email}</strong>
+              </p>
+              {isGmailUser ? (
+                <p className="text-zinc-500 dark:text-gray-400 leading-normal">
+                  Your email is a Gmail address, but it is not verified yet.
+                  Please sign out and sign in using the{" "}
+                  <strong>Sign In with Google</strong> button in the left
+                  sidebar to automatically verify your email and enable this
+                  feature.
+                </p>
+              ) : (
+                <p className="text-zinc-500 dark:text-gray-400 leading-normal">
+                  This feature requires a Google account. Please use the{" "}
+                  <strong>Sign In with Google</strong> button in the left
+                  sidebar to authenticate with a Gmail account.
+                </p>
+              )}
+            </div>
+          </div>
+        ) : !isPro && (dailyUsage?.emailCount ?? 0) >= 10 ? (
+          <div className="space-y-4">
+            <div className="p-4 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40 rounded-xl text-center">
+              <span className="text-3xl mb-2 block">⭐</span>
+              <h4 className="text-base font-semibold text-purple-800 dark:text-purple-300 mb-1">
+                Daily Email Limit Reached
+              </h4>
+              <p className="text-zinc-600 dark:text-gray-300 text-sm leading-relaxed">
+                Free accounts can send <strong>10 daily plan emails</strong>. 
+                Upgrade to Pro to remove all daily limits!
+              </p>
+            </div>
+            {onUpgradeClick && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEmailModalOpen(false);
+                  onUpgradeClick();
+                }}
+                className="w-full text-center py-2.5 px-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl text-sm font-semibold transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>Upgrade to Pro ✨</span>
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-4 pt-1">

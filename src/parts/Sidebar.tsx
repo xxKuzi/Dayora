@@ -19,6 +19,8 @@ interface SidebarProps {
   onSignOutClick: () => void;
   darkMode: string;
   onToggleDarkMode: () => void;
+  isPro?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 export default function Sidebar({
@@ -37,6 +39,8 @@ export default function Sidebar({
   onSignOutClick,
   darkMode,
   onToggleDarkMode,
+  isPro = false,
+  onUpgradeClick,
 }: SidebarProps) {
   const regularFolders = folders.filter(
     (f) => f.id !== trashId && f.name !== "Trash",
@@ -186,35 +190,53 @@ export default function Sidebar({
         </div>
 
         {user ? (
-          <div className="flex items-center justify-between gap-2 bg-zinc-200/30 dark:bg-zinc-900/30 p-2.5 rounded-xl border border-zinc-200/40 dark:border-zinc-800/40">
-            <div className="flex items-center gap-2 min-w-0">
-              {user.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt="Avatar"
-                  className="w-8 h-8 rounded-full border border-zinc-300/50 dark:border-zinc-700/50 flex-shrink-0"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                  {(user.displayName || user.email || "?").charAt(0).toUpperCase()}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2 bg-zinc-200/30 dark:bg-zinc-900/30 p-2.5 rounded-xl border border-zinc-200/40 dark:border-zinc-800/40">
+              <div className="flex items-center gap-2 min-w-0">
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt="Avatar"
+                    className="w-8 h-8 rounded-full border border-zinc-300/50 dark:border-zinc-700/50 flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    {(user.displayName || user.email || "?").charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-xs font-semibold truncate text-zinc-900 dark:text-zinc-100">
+                      {user.displayName || "Online User"}
+                    </span>
+                    {isPro && (
+                      <span className="px-1.5 py-0.5 text-[8px] font-black bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded uppercase tracking-wider flex-shrink-0">
+                        Pro
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
+                    {user.email}
+                  </span>
                 </div>
-              )}
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-semibold truncate text-zinc-900 dark:text-zinc-100">
-                  {user.displayName || "Online User"}
-                </span>
-                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
-                  {user.email}
-                </span>
               </div>
+              <button
+                onClick={onSignOutClick}
+                className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-sm text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors flex-shrink-0"
+                title="Sign Out"
+              >
+                🚪
+              </button>
             </div>
-            <button
-              onClick={onSignOutClick}
-              className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-sm text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors flex-shrink-0"
-              title="Sign Out"
-            >
-              🚪
-            </button>
+
+            {!isPro && onUpgradeClick && (
+              <button
+                onClick={onUpgradeClick}
+                className="w-full text-center py-2 px-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>✨ Upgrade to Pro</span>
+              </button>
+            )}
           </div>
         ) : (
           <button

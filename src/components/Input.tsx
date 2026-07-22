@@ -11,6 +11,7 @@ interface InputProps {
   min?: string;
   max?: string;
   autoFocus?: boolean;
+  required?: boolean;
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -26,6 +27,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       min,
       max,
       autoFocus,
+      required,
     },
     ref,
   ) => {
@@ -41,6 +43,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         min={min}
         max={max}
         autoFocus={autoFocus}
+        required={required}
         className={`px-3 py-2 rounded-lg bg-white/20 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 outline-none focus:ring-2 focus:ring-blue-500/50 border border-white/30 dark:border-zinc-600/50 backdrop-blur-sm transition-all duration-200 ${className}`}
       />
     );

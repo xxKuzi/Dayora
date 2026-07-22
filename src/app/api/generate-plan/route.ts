@@ -1,8 +1,96 @@
 import { NextResponse } from "next/server";
+import admin from "firebase-admin";
+
+if (!admin.apps.length) {
+  try {
+    admin.initializeApp({
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || "dayora-app",
+    });
+  } catch (error) {
+    console.error("Failed to initialize firebase-admin in generate-plan route:", error);
+  }
+}
 
 export async function POST(request: Request) {
   try {
     const { rawTasks, userSettings } = await request.json();
+
+    // 1. Verify Authentication if Bearer token is provided
+    let uid: string | null = null;
+    const authHeader = request.headers.get("authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split("Bearer ")[1];
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        uid = decodedToken.uid;
+      } catch (authError) {
+        console.error("Token verification failed in generate-plan:", authError);
+      }
+    }
+
+    // 2. Enforce limits using Firestore
+    try {
+      const dateStr = new Date().toISOString().split("T")[0]; // UTC date YYYY-MM-DD
+      const db = admin.firestore();
+
+      if (uid) {
+        // Logged-in user limit: 3/day (unless Pro)
+        const userDoc = await db.collection("users").doc(uid).get();
+        const isPro = userDoc.exists && userDoc.data()?.isPro === true;
+
+        const usageDocRef = db.collection("users").doc(uid).collection("dailyUsage").doc(dateStr);
+        const usageDoc = await usageDocRef.get();
+        const usageData = usageDoc.data() || { aiCount: 0 };
+        const aiCount = usageData.aiCount || 0;
+
+        const limit = isPro ? 20 : 3;
+
+        if (aiCount >= limit) {
+          return NextResponse.json(
+            {
+              error: "AI_LIMIT_EXCEEDED",
+              message: isPro 
+                ? "You have reached your Pro daily limit of 20 AI prompts." 
+                : "You have reached your daily limit of 3 free AI prompts. Upgrade to Pro for 20 daily prompts.",
+            },
+            { status: 403 }
+          );
+        }
+
+        await usageDocRef.set(
+          {
+            aiCount: admin.firestore.FieldValue.increment(1),
+          },
+          { merge: true }
+        );
+      } else {
+        // Unsigned user limit: 1/day
+        const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || request.headers.get("x-real-ip") || "anonymous";
+        const ipDocRef = db.collection("ipUsage").doc(`${ip}_${dateStr}`);
+        const ipDoc = await ipDocRef.get();
+        const ipData = ipDoc.data() || { aiCount: 0 };
+        const aiCount = ipData.aiCount || 0;
+
+        if (aiCount >= 1) {
+          return NextResponse.json(
+            {
+              error: "AI_LIMIT_EXCEEDED",
+              message: "You have reached your daily limit of 1 free AI prompt. Sign in for 20 free daily prompts, or upgrade to Pro.",
+            },
+            { status: 403 }
+          );
+        }
+
+        await ipDocRef.set(
+          {
+            aiCount: admin.firestore.FieldValue.increment(1),
+          },
+          { merge: true }
+        );
+      }
+    } catch (dbError) {
+      console.error("Firestore limits validation failed, bypassing check:", dbError);
+    }
 
     if (!rawTasks) {
       return NextResponse.json({ error: "Missing rawTasks parameter" }, { status: 400 });

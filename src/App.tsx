@@ -10,7 +10,7 @@ import type {
   UserSettings,
   CookiePreference,
 } from "./types";
-import { Button, CookieBanner, FolderModal, AuthModal } from "./components";
+import { Button, CookieBanner, FolderModal, AuthModal, UpgradeModal } from "./components";
 import type { FolderModalType } from "./components/FolderModal";
 import { nid, fid, deriveTitleFromBody, load, save } from "./utils";
 import { Sidebar, NotesList } from "./parts";
@@ -20,7 +20,7 @@ import { initializeAI, getAIService } from "./services/ai";
 import { auth, db } from "./services/firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import type { User } from "firebase/auth";
-import { doc, getDoc, setDoc, writeBatch, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, writeBatch, collection, getDocs, onSnapshot } from "firebase/firestore";
 
 export default function App() {
   // ---- State ----
@@ -30,6 +30,28 @@ export default function App() {
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
   const [isSynced, setIsSynced] = useState<boolean>(false);
   const [loadingAuth, setLoadingAuth] = useState<boolean>(true);
+
+  // Monetization limits states
+  const [isPro, setIsPro] = useState<boolean>(false);
+  const [dailyUsage, setDailyUsage] = useState<{ emailCount: number; aiCount: number }>({ emailCount: 0, aiCount: 0 });
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState<boolean>(false);
+  const [anonAiCount, setAnonAiCount] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const dateStr = new Date().toISOString().split("T")[0];
+      const stored = localStorage.getItem("dayora_anon_usage");
+      if (stored) {
+        try {
+          const data = JSON.parse(stored);
+          if (data.date === dateStr) {
+            return data.aiCount || 0;
+          }
+        } catch (e) {
+          console.error("Failed to parse anonymous AI count:", e);
+        }
+      }
+    }
+    return 0;
+  });
 
   const lastSyncedFoldersRef = useRef<Folder[]>([]);
   const lastSyncedNotesRef = useRef<Note[]>([]);
@@ -320,22 +342,63 @@ export default function App() {
       setLoadingAuth(false);
       return;
     }
+    let unsubUserDoc: (() => void) | null = null;
+    let unsubUsageDoc: (() => void) | null = null;
+
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Clean up previous listeners if any
+      if (unsubUserDoc) {
+        unsubUserDoc();
+        unsubUserDoc = null;
+      }
+      if (unsubUsageDoc) {
+        unsubUsageDoc();
+        unsubUsageDoc = null;
+      }
+
       setUser(firebaseUser);
       if (firebaseUser) {
         setIsSynced(false);
         try {
           const userDocRef = doc(db!, "users", firebaseUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
+
+          // Setup real-time listener for user document
+          unsubUserDoc = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              setIsPro(!!data.isPro);
+              if (data.settings) setSettings(data.settings);
+              if (data.darkMode) setDarkMode(data.darkMode);
+              if (data.comfortableTyping !== undefined && data.comfortableTyping !== null) {
+                setComfortableTyping(data.comfortableTyping);
+              }
+              if (data.cookiePreference) setCookiePreference(data.cookiePreference);
+            } else {
+              setIsPro(false);
+            }
+          });
+
+          // Setup real-time listener for daily usage document
+          const dateStr = new Date().toISOString().split("T")[0];
+          const usageDocRef = doc(db!, "users", firebaseUser.uid, "dailyUsage", dateStr);
+          unsubUsageDoc = onSnapshot(usageDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              setDailyUsage({
+                emailCount: data.emailCount || 0,
+                aiCount: data.aiCount || 0,
+              });
+            } else {
+              setDailyUsage({ emailCount: 0, aiCount: 0 });
+            }
+          });
 
           const foldersSnap = await getDocs(collection(db!, "users", firebaseUser.uid, "folders"));
           const notesSnap = await getDocs(collection(db!, "users", firebaseUser.uid, "notes"));
           const plansSnap = await getDocs(collection(db!, "users", firebaseUser.uid, "dailyPlans"));
 
+          const userDocSnap = await getDoc(userDocRef);
           const dbSettings = userDocSnap.exists() ? userDocSnap.data().settings : null;
-          const dbDarkMode = userDocSnap.exists() ? userDocSnap.data().darkMode : null;
-          const dbComfortableTyping = userDocSnap.exists() ? userDocSnap.data().comfortableTyping : null;
-          const dbCookiePreference = userDocSnap.exists() ? userDocSnap.data().cookiePreference : null;
           const dbFolders = foldersSnap.docs.map((doc) => doc.data() as Folder);
           const dbNotes = notesSnap.docs.map((doc) => doc.data() as Note);
           const dbPlans = plansSnap.docs.map((doc) => doc.data() as DailyPlan);
@@ -343,10 +406,6 @@ export default function App() {
           const hasFirestoreData = dbFolders.length > 0 || dbNotes.length > 0 || !!dbSettings;
 
           if (hasFirestoreData) {
-            if (dbSettings) setSettings(dbSettings);
-            if (dbDarkMode) setDarkMode(dbDarkMode);
-            if (dbComfortableTyping !== undefined && dbComfortableTyping !== null) setComfortableTyping(dbComfortableTyping);
-            if (dbCookiePreference) setCookiePreference(dbCookiePreference);
             if (dbFolders.length > 0) setFolders(dbFolders);
             if (dbNotes.length > 0) {
               setNotes(dbNotes);
@@ -395,6 +454,8 @@ export default function App() {
           setLoadingAuth(false);
         }
       } else {
+        setIsPro(false);
+        setDailyUsage({ emailCount: 0, aiCount: 0 });
         setIsSynced(false);
         const localData = load() as AppState | null;
         if (localData) {
@@ -449,7 +510,11 @@ export default function App() {
         setLoadingAuth(false);
       }
     });
-    return () => unsub();
+    return () => {
+      unsub();
+      if (unsubUserDoc) unsubUserDoc();
+      if (unsubUsageDoc) unsubUsageDoc();
+    };
   }, [auth]);
 
   // Sync folders to Firestore
@@ -837,10 +902,31 @@ export default function App() {
   }
 
   async function handleGenerateWithGemini(tasks: string, date: string) {
+    // 1. Enforce client-side limit check
+    if (user) {
+      const limit = isPro ? 20 : 3;
+      if (dailyUsage.aiCount >= limit) {
+        if (isPro) {
+          setAiError("You have reached your Pro daily limit of 20 AI prompts. Limits reset daily.");
+        } else {
+          setIsUpgradeModalOpen(true);
+        }
+        return;
+      }
+    } else {
+      if (anonAiCount >= 1) {
+        setIsUpgradeModalOpen(true);
+        return;
+      }
+    }
+
     try {
       setAiError(null);
       const aiService = getAIService();
-      const generatedPlan = await aiService.generateDailyPlan(tasks, settings);
+      
+      // Get Bearer token if logged in
+      const token = user ? await user.getIdToken() : undefined;
+      const generatedPlan = await aiService.generateDailyPlan(tasks, settings, token);
 
       const existingPlan = dailyPlans.find((plan) => plan.date === date);
 
@@ -861,14 +947,27 @@ export default function App() {
         };
         setDailyPlans((prev) => [newPlan, ...prev]);
       }
-    } catch (error) {
+
+      // If anonymous, increment local limit count
+      if (!user) {
+        const nextAnonCount = anonAiCount + 1;
+        setAnonAiCount(nextAnonCount);
+        const dateStr = new Date().toISOString().split("T")[0];
+        localStorage.setItem("dayora_anon_usage", JSON.stringify({ date: dateStr, aiCount: nextAnonCount }));
+      }
+    } catch (error: any) {
       console.error("AI generation failed:", error);
+      
+      // Open UpgradeModal if limit exceeded error matches
+      if (error instanceof Error && (error.message.includes("LIMIT_EXCEEDED") || error.message.includes("limit"))) {
+        setIsUpgradeModalOpen(true);
+      }
+
       setAiError(
         error instanceof Error
           ? error.message
           : "Failed to generate plan with AI",
       );
-      // Don't automatically fall back - let user choose
     }
   }
 
@@ -977,6 +1076,8 @@ export default function App() {
               onSignOutClick={handleSignOut}
               darkMode={darkMode}
               onToggleDarkMode={handleToggleDarkMode}
+              isPro={isPro}
+              onUpgradeClick={() => setIsUpgradeModalOpen(true)}
             />
           </div>
         )}
@@ -1064,6 +1165,10 @@ export default function App() {
               selectedDate={selectedDate}
               onDateChange={setSelectedDate}
               onMoveTaskToTomorrow={handleMoveTaskToTomorrow}
+              isPro={isPro}
+              dailyUsage={dailyUsage}
+              anonAiCount={anonAiCount}
+              onUpgradeClick={() => setIsUpgradeModalOpen(true)}
             />
           )}
 
@@ -1102,6 +1207,14 @@ export default function App() {
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
+      />
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        user={user}
+        onSignInClick={() => setAuthModalOpen(true)}
       />
     </div>
   );
