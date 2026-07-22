@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import type { DailyPlan, DailyTask, UserSettings } from "../types";
 import { Button, Input, Textarea } from "../components";
 import type { User } from "firebase/auth";
-import { getFunctions, httpsCallable } from "firebase/functions";
 import { isFirebaseConfigured } from "../services/firebase";
 
 interface DailyPlanProps {
@@ -52,13 +51,27 @@ export default function DailyPlan({
         throw new Error("Firebase configuration was not detected.");
       }
       
-      const functions = getFunctions();
-      const sendPlanEmailFunc = httpsCallable(functions, "sendPlanEmail");
+      let token = "";
+      if (user) {
+        token = await user.getIdToken();
+      }
       
-      await sendPlanEmailFunc({
-        date: dailyPlan.date,
-        tasks: dailyPlan.tasks,
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          date: dailyPlan.date,
+          tasks: dailyPlan.tasks,
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to send email");
+      }
 
       setEmailStatus("success");
       setTimeout(() => {

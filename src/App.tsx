@@ -14,7 +14,7 @@ import { Button, CookieBanner, FolderModal, AuthModal } from "./components";
 import type { FolderModalType } from "./components/FolderModal";
 import { nid, fid, deriveTitleFromBody, load, save } from "./utils";
 import { Sidebar, NotesList } from "./parts";
-import { Editor, DailyPlan as DailyPlanComponent, Settings } from "./pages";
+import { Editor, DailyPlan as DailyPlanComponent, Settings } from "./views";
 import { initializeAI, getAIService } from "./services/ai";
 
 import { auth, db } from "./services/firebase";
