@@ -17,6 +17,8 @@ interface SidebarProps {
   user: User | null;
   onSignInClick: () => void;
   onSignOutClick: () => void;
+  darkMode: string;
+  onToggleDarkMode: () => void;
 }
 
 export default function Sidebar({
@@ -33,6 +35,8 @@ export default function Sidebar({
   user,
   onSignInClick,
   onSignOutClick,
+  darkMode,
+  onToggleDarkMode,
 }: SidebarProps) {
   const regularFolders = folders.filter(
     (f) => f.id !== trashId && f.name !== "Trash",
@@ -166,8 +170,21 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Bottom: Auth / Profile Section */}
-      <div className="pt-4 border-t border-zinc-200/80 dark:border-zinc-800/80 mt-4 flex-shrink-0">
+      {/* Bottom: Theme Toggle & Auth / Profile Section */}
+      <div className="pt-4 border-t border-zinc-200/80 dark:border-zinc-800/80 mt-4 flex-shrink-0 space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Theme
+          </span>
+          <button
+            onClick={onToggleDarkMode}
+            title={`Toggle theme mode (currently ${darkMode})`}
+            className="px-2.5 py-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-lg text-xs transition-colors border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-center gap-1 cursor-pointer font-medium text-zinc-700 dark:text-zinc-300"
+          >
+            <span>{darkMode === "light" ? "☀ Light" : darkMode === "dark" ? "☾ Dark" : "🌓 Auto"}</span>
+          </button>
+        </div>
+
         {user ? (
           <div className="flex items-center justify-between gap-2 bg-zinc-200/30 dark:bg-zinc-900/30 p-2.5 rounded-xl border border-zinc-200/40 dark:border-zinc-800/40">
             <div className="flex items-center gap-2 min-w-0">

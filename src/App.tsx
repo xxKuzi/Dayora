@@ -930,13 +930,15 @@ export default function App() {
               user={user}
               onSignInClick={() => setAuthModalOpen(true)}
               onSignOutClick={handleSignOut}
+              darkMode={darkMode}
+              onToggleDarkMode={handleToggleDarkMode}
             />
           </div>
         )}
 
         {/* Main Content Area */}
         <div
-          className={`flex-1 h-screen flex flex-col bg-black/d0 ${
+          className={`flex-1 h-screen flex flex-col overflow-y-auto bg-transparent ${
             activeView === "notes"
               ? notesListVisible
                 ? sidebarVisible
@@ -971,8 +973,6 @@ export default function App() {
                     onQueryChange={setQuery}
                     onNoteSelect={setActiveNoteId}
                     onNewNote={handleNewNote}
-                    onToggleDarkMode={handleToggleDarkMode}
-                    darkMode={darkMode}
                     folders={folders}
                     onTogglePin={togglePin}
                     onDeleteNote={handleDeleteNote}

@@ -123,7 +123,7 @@ export default function Settings({
   };
 
   return (
-    <div className="flex-1 p-6 bg-gray-900 text-white min-h-screen">
+    <div className="p-6 bg-gray-900 text-white min-h-screen shrink-0">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8 pt-8">
           <h1 className="text-4xl font-bold text-white mb-2">Settings</h1>

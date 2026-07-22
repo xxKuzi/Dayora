@@ -9,8 +9,6 @@ interface NotesListProps {
   onQueryChange: (query: string) => void;
   onNoteSelect: (noteId: string) => void;
   onNewNote: () => void;
-  onToggleDarkMode: () => void;
-  darkMode: DarkMode;
   folders: Folder[];
   onTogglePin: (note: Note) => void;
   onDeleteNote: (note: Note) => void;
@@ -25,8 +23,6 @@ export default function NotesList({
   onQueryChange,
   onNoteSelect,
   onNewNote,
-  onToggleDarkMode,
-  darkMode,
   folders,
   onTogglePin,
   onDeleteNote,
@@ -83,13 +79,6 @@ export default function NotesList({
         />
         <Button onClick={onNewNote} title="New note (Ctrl/Cmd+N)">
           New
-        </Button>
-        <Button
-          onClick={onToggleDarkMode}
-          title={`Toggle theme mode (currently ${darkMode})`}
-          className="min-w-[44px]"
-        >
-          {darkMode === "light" ? "☀" : darkMode === "dark" ? "☾" : "🌓"}
         </Button>
       </div>
 
