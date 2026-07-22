@@ -33,6 +33,7 @@ export interface DailyTask {
   estimatedTime?: number; // in minutes
   category?: string;
   timeOfDay?: "morning" | "midday" | "evening";
+  time?: string; // Specific start time (e.g. "14:30" or "09:00" in HH:MM format)
 }
 
 export interface UserSettings {

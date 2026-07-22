@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import { flushSync } from "react-dom";
 import type { DailyPlan, DailyTask, UserSettings } from "../types";
-import { Button, Input, Textarea } from "../components";
+import { Button, Input, Textarea, Modal } from "../components";
 import type { User } from "firebase/auth";
 import { isFirebaseConfigured } from "../services/firebase";
 
@@ -14,41 +15,99 @@ interface DailyPlanProps {
   user: User | null;
 }
 
+const formatTime = (timeStr: string | undefined): string => {
+  if (!timeStr) return "";
+  const [hourStr, minStr] = timeStr.split(":");
+  const hour = parseInt(hourStr, 10);
+  if (isNaN(hour)) return timeStr;
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const formattedHour = hour % 12 || 12;
+  return `${formattedHour}:${minStr} ${ampm}`;
+};
+
 const parseRawTextEvent = (raw: string | undefined) => {
   if (!raw)
     return {
       text: "",
       timeOfDay: "morning" as const,
       priority: "medium" as const,
+      time: undefined as string | undefined,
     };
   const parts = raw.split("-").map((p) => p.trim());
   const text = parts[0] || "";
   const timeStr = parts[1] || "";
   const priorityStr = parts[2] || "";
 
+  // Parse specific time (e.g., "14:30", "2:30 pm", "2:30PM", "9am", "2pm")
+  let time: string | undefined = undefined;
+  if (timeStr) {
+    const timeMatch = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1], 10);
+      const minutes = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+      const ampm = timeMatch[3] ? timeMatch[3].toLowerCase() : null;
+
+      const isQuickSelector =
+        timeStr === "1" || timeStr === "2" || timeStr === "3";
+
+      if (
+        !isQuickSelector &&
+        hours >= 0 &&
+        hours <= 23 &&
+        minutes >= 0 &&
+        minutes <= 59
+      ) {
+        if (ampm) {
+          if (ampm === "pm" && hours < 12) {
+            hours += 12;
+          } else if (ampm === "am" && hours === 12) {
+            hours = 0;
+          }
+        } else {
+          // General heuristic: assume hours < 8 are PM (e.g. 2 -> 14, 5 -> 17), and 8-11 are AM
+          if (hours > 0 && hours < 8) {
+            hours += 12;
+          }
+        }
+        time = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+      }
+    }
+  }
+
   // Parse timeOfDay
   let timeOfDay: "morning" | "midday" | "evening" = "morning";
-  const timeLower = timeStr.toLowerCase();
-  if (
-    timeLower === "1" ||
-    timeLower.includes("am") ||
-    timeLower.includes("morn")
-  ) {
-    timeOfDay = "morning";
-  } else if (
-    timeLower === "2" ||
-    timeLower.includes("noon") ||
-    timeLower.includes("mid") ||
-    timeLower.includes("lunch")
-  ) {
-    timeOfDay = "midday";
-  } else if (
-    timeLower === "3" ||
-    timeLower.includes("pm") ||
-    timeLower.includes("night") ||
-    timeLower.includes("eve")
-  ) {
-    timeOfDay = "evening";
+  if (time) {
+    const hours = parseInt(time.split(":")[0], 10);
+    if (hours >= 6 && hours < 12) {
+      timeOfDay = "morning";
+    } else if (hours >= 12 && hours < 18) {
+      timeOfDay = "midday";
+    } else {
+      timeOfDay = "evening";
+    }
+  } else {
+    const timeLower = timeStr.toLowerCase();
+    if (
+      timeLower === "1" ||
+      timeLower.includes("am") ||
+      timeLower.includes("morn")
+    ) {
+      timeOfDay = "morning";
+    } else if (
+      timeLower === "2" ||
+      timeLower.includes("noon") ||
+      timeLower.includes("mid") ||
+      timeLower.includes("lunch")
+    ) {
+      timeOfDay = "midday";
+    } else if (
+      timeLower === "3" ||
+      timeLower.includes("pm") ||
+      timeLower.includes("night") ||
+      timeLower.includes("eve")
+    ) {
+      timeOfDay = "evening";
+    }
   }
 
   // Parse priority
@@ -72,7 +131,7 @@ const parseRawTextEvent = (raw: string | undefined) => {
     priority = "medium";
   }
 
-  return { text, timeOfDay, priority };
+  return { text, timeOfDay, priority, time };
 };
 
 export default function DailyPlan({
@@ -88,6 +147,154 @@ export default function DailyPlan({
   const [useTableMode, setUseTableMode] = useState(false);
   const [useAIMode, setUseAIMode] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
+
+  // Edit task modal states
+  const [editingTask, setEditingTask] = useState<DailyTask | null>(null);
+  const [editTaskText, setEditTaskText] = useState("");
+  const [editTaskPriority, setEditTaskPriority] = useState<
+    "low" | "medium" | "high"
+  >("medium");
+  const [editTaskTimeOfDay, setEditTaskTimeOfDay] = useState<
+    "morning" | "midday" | "evening"
+  >("morning");
+  const [editTaskTime, setEditTaskTime] = useState<string | undefined>(
+    undefined,
+  );
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleUpdatePlan = (updatedPlan: DailyPlan) => {
+    if (document.startViewTransition) {
+      document.startViewTransition(() => {
+        flushSync(() => {
+          onUpdatePlan(updatedPlan);
+        });
+      });
+    } else {
+      onUpdatePlan(updatedPlan);
+    }
+  };
+
+  const handleOpenEditModal = (task: DailyTask) => {
+    setEditingTask(task);
+    setEditTaskText(task.text);
+    setEditTaskPriority(task.priority);
+    setEditTaskTimeOfDay(task.timeOfDay || "morning");
+    setEditTaskTime(task.time);
+    setShowDeleteConfirm(false);
+  };
+
+  const handleSaveEditTask = () => {
+    if (!dailyPlan || !editingTask || !editTaskText.trim()) return;
+
+    const updatedTask: DailyTask = {
+      ...editingTask,
+      text: editTaskText.trim(),
+      priority: editTaskPriority,
+      timeOfDay: editTaskTimeOfDay,
+      time: editTaskTime,
+    };
+
+    const updatedPlan = {
+      ...dailyPlan,
+      tasks: dailyPlan.tasks.map((t) =>
+        t.id === editingTask.id ? updatedTask : t,
+      ),
+      updatedAt: Date.now(),
+    };
+
+    handleUpdatePlan(updatedPlan);
+    setEditingTask(null);
+  };
+
+  // Drag and drop states
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    e.dataTransfer.setData("text/plain", taskId);
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedTaskId(taskId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDropOnTask = (e: React.DragEvent, targetTaskId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!dailyPlan) return;
+
+    const sourceTaskId = e.dataTransfer.getData("text/plain") || draggedTaskId;
+    if (!sourceTaskId || sourceTaskId === targetTaskId) return;
+
+    const sourceIndex = dailyPlan.tasks.findIndex((t) => t.id === sourceTaskId);
+    const targetIndex = dailyPlan.tasks.findIndex((t) => t.id === targetTaskId);
+
+    if (sourceIndex === -1 || targetIndex === -1) return;
+
+    const updatedTasks = [...dailyPlan.tasks];
+    const [draggedTask] = updatedTasks.splice(sourceIndex, 1);
+
+    // Update timeOfDay to match target task's category
+    const targetTask = dailyPlan.tasks[targetIndex];
+    draggedTask.timeOfDay = targetTask.timeOfDay;
+
+    // Find the new target index in the modified tasks list
+    const newTargetIndex = updatedTasks.findIndex((t) => t.id === targetTaskId);
+    const insertIndex = sourceIndex < targetIndex ? newTargetIndex + 1 : newTargetIndex;
+    updatedTasks.splice(insertIndex, 0, draggedTask);
+
+    handleUpdatePlan({
+      ...dailyPlan,
+      tasks: updatedTasks,
+      updatedAt: Date.now(),
+    });
+    setDraggedTaskId(null);
+  };
+
+  const handleDropOnCategory = (
+    e: React.DragEvent,
+    category: "morning" | "midday" | "evening" | "other",
+  ) => {
+    e.preventDefault();
+    if (!dailyPlan) return;
+
+    const sourceTaskId = e.dataTransfer.getData("text/plain") || draggedTaskId;
+    if (!sourceTaskId) return;
+
+    const sourceIndex = dailyPlan.tasks.findIndex((t) => t.id === sourceTaskId);
+    if (sourceIndex === -1) return;
+
+    const updatedTasks = [...dailyPlan.tasks];
+    const [draggedTask] = updatedTasks.splice(sourceIndex, 1);
+
+    // Update timeOfDay based on target category
+    draggedTask.timeOfDay = category === "other" ? undefined : category;
+
+    // Find the insertion index at the end of the matching category grouping
+    const lastCategoryIndex = [...updatedTasks]
+      .reverse()
+      .findIndex(
+        (t) =>
+          (category === "other" && t.timeOfDay === undefined) ||
+          (category !== "other" && t.timeOfDay === category),
+      );
+
+    if (lastCategoryIndex !== -1) {
+      const insertIndex = updatedTasks.length - lastCategoryIndex;
+      updatedTasks.splice(insertIndex, 0, draggedTask);
+    } else {
+      updatedTasks.push(draggedTask);
+    }
+
+    handleUpdatePlan({
+      ...dailyPlan,
+      tasks: updatedTasks,
+      updatedAt: Date.now(),
+    });
+    setDraggedTaskId(null);
+  };
 
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
@@ -159,7 +366,6 @@ export default function DailyPlan({
     { text: "", priority: "medium", timeOfDay: "morning" },
   ]);
 
-
   const today = new Date().toISOString().split("T")[0];
 
   const handleToggleTask = (taskId: string) => {
@@ -173,7 +379,7 @@ export default function DailyPlan({
       updatedAt: Date.now(),
     };
 
-    onUpdatePlan(updatedPlan);
+    handleUpdatePlan(updatedPlan);
   };
 
   const handleDeleteTask = (taskId: string) => {
@@ -185,7 +391,7 @@ export default function DailyPlan({
       updatedAt: Date.now(),
     };
 
-    onUpdatePlan(updatedPlan);
+    handleUpdatePlan(updatedPlan);
   };
 
   const handleGeneratePlan = async () => {
@@ -200,6 +406,7 @@ export default function DailyPlan({
         completed: false,
         priority: task.priority || "medium",
         timeOfDay: task.timeOfDay || "morning",
+        time: task.time,
       }));
 
       if (!dailyPlan) {
@@ -245,6 +452,7 @@ export default function DailyPlan({
             completed: false,
             priority: parsed.priority,
             timeOfDay: parsed.timeOfDay,
+            time: parsed.time,
           };
         });
 
@@ -382,11 +590,24 @@ export default function DailyPlan({
 
   const handleTableTaskChange = (
     index: number,
-    field: keyof DailyTask,
+    field: keyof DailyTask | "rawText",
     value: any,
   ) => {
     const updated = [...tableTasks];
-    updated[index] = { ...updated[index], [field]: value };
+    const updatedTask = { ...updated[index], [field]: value } as any;
+
+    if (field === "time" && value) {
+      const hour = parseInt(value.split(":")[0], 10);
+      if (hour >= 6 && hour < 12) {
+        updatedTask.timeOfDay = "morning";
+      } else if (hour >= 12 && hour < 18) {
+        updatedTask.timeOfDay = "midday";
+      } else {
+        updatedTask.timeOfDay = "evening";
+      }
+    }
+
+    updated[index] = updatedTask;
     setTableTasks(updated);
   };
 
@@ -431,6 +652,19 @@ export default function DailyPlan({
         return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
+    }
+  };
+
+  const getPriorityStripColor = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-500/60 dark:bg-red-500/40";
+      case "medium":
+        return "bg-blue-500/60 dark:bg-blue-500/40";
+      case "low":
+        return "bg-green-500/60 dark:bg-green-500/40";
+      default:
+        return "bg-gray-400/30";
     }
   };
 
@@ -630,7 +864,7 @@ export default function DailyPlan({
                   <div className="flex gap-3 items-center mb-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400 px-1">
                     <div className="flex-1">Task Name</div>
                     <div className="w-32">Importance</div>
-                    <div className="w-28 text-center">Part of Day</div>
+                    <div className="w-48 text-center">Part of Day & Time</div>
                     <div className="w-6"></div>
                   </div>
 
@@ -659,7 +893,7 @@ export default function DailyPlan({
                         <option value="medium">Medium</option>
                         <option value="high">High</option>
                       </select>
-                      <div className="w-28 flex gap-1 justify-center">
+                      <div className="w-48 flex gap-1 justify-center items-center">
                         {[
                           {
                             key: "morning",
@@ -670,8 +904,7 @@ export default function DailyPlan({
                           {
                             key: "midday",
                             label: "2",
-                            title:
-                              "Midday (12PM-6PM): Meetings, focused work",
+                            title: "Midday (12PM-6PM): Meetings, focused work",
                           },
                           {
                             key: "evening",
@@ -690,7 +923,7 @@ export default function DailyPlan({
                               )
                             }
                             title={time.title}
-                            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                            className={`px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer ${
                               task.timeOfDay === time.key
                                 ? getTimeOfDayColor(time.key)
                                 : "bg-gray-700 text-gray-400 hover:bg-gray-600"
@@ -699,6 +932,50 @@ export default function DailyPlan({
                             {time.label}
                           </button>
                         ))}
+
+                        {/* Specific Time Picker / Add Time Button */}
+                        {task.time !== undefined ? (
+                          <div className="relative flex items-center bg-white dark:bg-gray-800 border border-black/15 dark:border-gray-700 rounded px-1.5 py-0.5 text-xs font-medium text-zinc-900 dark:text-white max-w-[100px]">
+                            <input
+                              type="time"
+                              value={task.time}
+                              onChange={(e) =>
+                                handleTableTaskChange(
+                                  index,
+                                  "time",
+                                  e.target.value,
+                                )
+                              }
+                              className="bg-transparent border-none p-0 text-xs font-semibold focus:ring-0 focus:outline-none w-16 text-zinc-900 dark:text-white cursor-pointer"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleTableTaskChange(index, "time", undefined)
+                              }
+                              className="ml-1 text-zinc-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 cursor-pointer"
+                              title="Clear specific time"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              let defaultTime = "09:00";
+                              if (task.timeOfDay === "midday")
+                                defaultTime = "13:00";
+                              else if (task.timeOfDay === "evening")
+                                defaultTime = "19:00";
+                              handleTableTaskChange(index, "time", defaultTime);
+                            }}
+                            className="px-2 py-1 rounded text-xs font-medium bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:border-purple-500/35 transition-colors cursor-pointer"
+                            title="Add specific start time"
+                          >
+                            + Time
+                          </button>
+                        )}
                       </div>
                       <div className="w-6 flex justify-center">
                         {tableTasks.length > 1 && (
@@ -770,9 +1047,7 @@ export default function DailyPlan({
                             : "bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white border border-gray-600"
                         }`}
                         title={
-                          isRecording
-                            ? "Stop recording"
-                            : "Record voice input"
+                          isRecording ? "Stop recording" : "Record voice input"
                         }
                       >
                         {isRecording ? (
@@ -878,7 +1153,7 @@ export default function DailyPlan({
 
         {/* Tasks List - Grouped by Time */}
         {dailyPlan && (
-          <div className="space-y-6">
+          <div className="space-y-20">
             {dailyPlan.tasks.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 <div className="text-4xl mb-2">📝</div>
@@ -906,17 +1181,33 @@ export default function DailyPlan({
                           {morningTasks.length} completed
                         </span>
                       </div>
-                      <div className="space-y-3">
+                      <div
+                        className="space-y-3 min-h-[50px]"
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDropOnCategory(e, "morning")}
+                      >
                         {morningTasks.map((task) => (
                           <div
                             key={task.id}
-                            className={`p-4 rounded-xl border transition-all duration-200 backdrop-blur-sm ${
+                            style={{ viewTransitionName: `task-${task.id}` } as React.CSSProperties}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, task.id)}
+                            onDragEnd={() => setDraggedTaskId(null)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDropOnTask(e, task.id)}
+                            className={`relative overflow-hidden p-4 rounded-xl border transition-all duration-200 backdrop-blur-sm ${
                               task.completed
                                 ? "bg-green-50/80 dark:bg-green-950/20 border-green-200 dark:border-green-900/50"
                                 : "bg-white/85 dark:bg-black/55 border-black/20 dark:border-white/5 hover:border-black/35 dark:hover:border-white/10"
-                            }`}
+                            } ${task.id === draggedTaskId ? "opacity-30 border-dashed border-zinc-400 dark:border-zinc-700" : ""}`}
                           >
                             <div className="flex items-start gap-3">
+                              <div
+                                className="cursor-grab active:cursor-grabbing text-zinc-300 dark:text-zinc-700 hover:text-zinc-500 dark:hover:text-zinc-400 transition-colors p-0.5 shrink-0 flex items-center justify-center font-bold text-sm tracking-widest select-none self-center"
+                                title="Drag to reorder"
+                              >
+                                ⠿
+                              </div>
                               <button
                                 onClick={() => handleToggleTask(task.id)}
                                 className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
@@ -939,25 +1230,29 @@ export default function DailyPlan({
                                 >
                                   {task.text}
                                 </p>
-                                <div className="flex gap-2 mt-2">
-                                  {task.priority !== "medium" && (
-                                    <span
-                                      className={`inline-block px-2 py-1 text-xs rounded-full ${getPriorityColor(
-                                        task.priority,
-                                      )}`}
-                                    >
-                                      {task.priority} priority
-                                    </span>
-                                  )}
-                                </div>
                               </div>
-                              <button
-                                onClick={() => handleDeleteTask(task.id)}
-                                className="text-gray-400 hover:text-red-400 transition-colors"
-                              >
-                                🗑️
-                              </button>
+                              <div className="flex items-center gap-2 shrink-0 self-center">
+                                {task.time && (
+                                  <span className="text-xs opacity-90 font-medium whitespace-nowrap text-zinc-500 dark:text-zinc-400">
+                                    {formatTime(task.time)}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => handleOpenEditModal(task)}
+                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none"
+                                  title="Edit task"
+                                >
+                                  ⋮
+                                </button>
+                              </div>
                             </div>
+                            {task.priority && !task.completed && (
+                              <div
+                                className={`absolute bottom-0 left-0 right-0 h-[2px] ${getPriorityStripColor(
+                                  task.priority,
+                                )}`}
+                              />
+                            )}
                           </div>
                         ))}
                       </div>
@@ -985,17 +1280,33 @@ export default function DailyPlan({
                           {middayTasks.length} completed
                         </span>
                       </div>
-                      <div className="space-y-3">
+                      <div
+                        className="space-y-3 min-h-[50px]"
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDropOnCategory(e, "midday")}
+                      >
                         {middayTasks.map((task) => (
                           <div
                             key={task.id}
-                            className={`p-4 rounded-xl border transition-all duration-200 backdrop-blur-sm ${
+                            style={{ viewTransitionName: `task-${task.id}` } as React.CSSProperties}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, task.id)}
+                            onDragEnd={() => setDraggedTaskId(null)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDropOnTask(e, task.id)}
+                            className={`relative overflow-hidden p-4 rounded-xl border transition-all duration-200 backdrop-blur-sm ${
                               task.completed
                                 ? "bg-green-50/80 dark:bg-green-950/20 border-green-200 dark:border-green-900/50"
                                 : "bg-white/85 dark:bg-black/55 border-black/20 dark:border-white/5 hover:border-black/35 dark:hover:border-white/10"
-                            }`}
+                            } ${task.id === draggedTaskId ? "opacity-30 border-dashed border-zinc-400 dark:border-zinc-700" : ""}`}
                           >
                             <div className="flex items-start gap-3">
+                              <div
+                                className="cursor-grab active:cursor-grabbing text-zinc-300 dark:text-zinc-700 hover:text-zinc-500 dark:hover:text-zinc-400 transition-colors p-0.5 shrink-0 flex items-center justify-center font-bold text-sm tracking-widest select-none self-center"
+                                title="Drag to reorder"
+                              >
+                                ⠿
+                              </div>
                               <button
                                 onClick={() => handleToggleTask(task.id)}
                                 className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
@@ -1018,25 +1329,29 @@ export default function DailyPlan({
                                 >
                                   {task.text}
                                 </p>
-                                <div className="flex gap-2 mt-2">
-                                  {task.priority !== "medium" && (
-                                    <span
-                                      className={`inline-block px-2 py-1 text-xs rounded-full ${getPriorityColor(
-                                        task.priority,
-                                      )}`}
-                                    >
-                                      {task.priority} priority
-                                    </span>
-                                  )}
-                                </div>
                               </div>
-                              <button
-                                onClick={() => handleDeleteTask(task.id)}
-                                className="text-gray-400 hover:text-red-400 transition-colors"
-                              >
-                                🗑️
-                              </button>
+                              <div className="flex items-center gap-2 shrink-0 self-center">
+                                {task.time && (
+                                  <span className="text-xs opacity-70 font-medium whitespace-nowrap text-zinc-500 dark:text-zinc-400">
+                                    {formatTime(task.time)}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => handleOpenEditModal(task)}
+                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none"
+                                  title="Edit task"
+                                >
+                                  ⋮
+                                </button>
+                              </div>
                             </div>
+                            {task.priority && !task.completed && (
+                              <div
+                                className={`absolute bottom-0 left-0 right-0 h-[2px] ${getPriorityStripColor(
+                                  task.priority,
+                                )}`}
+                              />
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1064,17 +1379,33 @@ export default function DailyPlan({
                           {eveningTasks.length} completed
                         </span>
                       </div>
-                      <div className="space-y-3">
+                      <div
+                        className="space-y-3 min-h-[50px]"
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDropOnCategory(e, "evening")}
+                      >
                         {eveningTasks.map((task) => (
                           <div
                             key={task.id}
-                            className={`p-4 rounded-xl border transition-all duration-200 backdrop-blur-sm ${
+                            style={{ viewTransitionName: `task-${task.id}` } as React.CSSProperties}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, task.id)}
+                            onDragEnd={() => setDraggedTaskId(null)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDropOnTask(e, task.id)}
+                            className={`relative overflow-hidden p-4 rounded-xl border transition-all duration-200 backdrop-blur-sm ${
                               task.completed
                                 ? "bg-green-50/80 dark:bg-green-950/20 border-green-200 dark:border-green-900/50"
                                 : "bg-white/85 dark:bg-black/55 border-black/20 dark:border-white/5 hover:border-black/35 dark:hover:border-white/10"
-                            }`}
+                            } ${task.id === draggedTaskId ? "opacity-30 border-dashed border-zinc-400 dark:border-zinc-700" : ""}`}
                           >
                             <div className="flex items-start gap-3">
+                              <div
+                                className="cursor-grab active:cursor-grabbing text-zinc-300 dark:text-zinc-700 hover:text-zinc-500 dark:hover:text-zinc-400 transition-colors p-0.5 shrink-0 flex items-center justify-center font-bold text-sm tracking-widest select-none self-center"
+                                title="Drag to reorder"
+                              >
+                                ⠿
+                              </div>
                               <button
                                 onClick={() => handleToggleTask(task.id)}
                                 className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
@@ -1097,25 +1428,29 @@ export default function DailyPlan({
                                 >
                                   {task.text}
                                 </p>
-                                <div className="flex gap-2 mt-2">
-                                  {task.priority !== "medium" && (
-                                    <span
-                                      className={`inline-block px-2 py-1 text-xs rounded-full ${getPriorityColor(
-                                        task.priority,
-                                      )}`}
-                                    >
-                                      {task.priority} priority
-                                    </span>
-                                  )}
-                                </div>
                               </div>
-                              <button
-                                onClick={() => handleDeleteTask(task.id)}
-                                className="text-gray-400 hover:text-red-400 transition-colors"
-                              >
-                                🗑️
-                              </button>
+                              <div className="flex items-center gap-2 shrink-0 self-center">
+                                {task.time && (
+                                  <span className="text-xs opacity-70 font-medium whitespace-nowrap text-zinc-500 dark:text-zinc-400">
+                                    {formatTime(task.time)}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => handleOpenEditModal(task)}
+                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none"
+                                  title="Edit task"
+                                >
+                                  ⋮
+                                </button>
+                              </div>
                             </div>
+                            {task.priority && !task.completed && (
+                              <div
+                                className={`absolute bottom-0 left-0 right-0 h-[2px] ${getPriorityStripColor(
+                                  task.priority,
+                                )}`}
+                              />
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1143,17 +1478,33 @@ export default function DailyPlan({
                           {untimedTasks.length} completed
                         </span>
                       </div>
-                      <div className="space-y-3">
+                      <div
+                        className="space-y-3 min-h-[50px]"
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDropOnCategory(e, "other")}
+                      >
                         {untimedTasks.map((task) => (
                           <div
                             key={task.id}
-                            className={`p-4 rounded-xl border transition-all duration-200 backdrop-blur-sm ${
+                            style={{ viewTransitionName: `task-${task.id}` } as React.CSSProperties}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, task.id)}
+                            onDragEnd={() => setDraggedTaskId(null)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDropOnTask(e, task.id)}
+                            className={`relative overflow-hidden p-4 rounded-xl border transition-all duration-200 backdrop-blur-sm ${
                               task.completed
                                 ? "bg-green-50/80 dark:bg-green-950/20 border-green-200 dark:border-green-900/50"
                                 : "bg-white/85 dark:bg-black/55 border-black/20 dark:border-white/5 hover:border-black/35 dark:hover:border-white/10"
-                            }`}
+                            } ${task.id === draggedTaskId ? "opacity-30 border-dashed border-zinc-400 dark:border-zinc-700" : ""}`}
                           >
                             <div className="flex items-start gap-3">
+                              <div
+                                className="cursor-grab active:cursor-grabbing text-zinc-300 dark:text-zinc-700 hover:text-zinc-500 dark:hover:text-zinc-400 transition-colors p-0.5 shrink-0 flex items-center justify-center font-bold text-sm tracking-widest select-none self-center"
+                                title="Drag to reorder"
+                              >
+                                ⠿
+                              </div>
                               <button
                                 onClick={() => handleToggleTask(task.id)}
                                 className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
@@ -1176,25 +1527,29 @@ export default function DailyPlan({
                                 >
                                   {task.text}
                                 </p>
-                                <div className="flex gap-2 mt-2">
-                                  {task.priority !== "medium" && (
-                                    <span
-                                      className={`inline-block px-2 py-1 text-xs rounded-full ${getPriorityColor(
-                                        task.priority,
-                                      )}`}
-                                    >
-                                      {task.priority} priority
-                                    </span>
-                                  )}
-                                </div>
                               </div>
-                              <button
-                                onClick={() => handleDeleteTask(task.id)}
-                                className="text-gray-400 hover:text-red-400 transition-colors"
-                              >
-                                🗑️
-                              </button>
+                              <div className="flex items-center gap-2 shrink-0 self-center">
+                                {task.time && (
+                                  <span className="text-xs opacity-70 font-medium whitespace-nowrap text-zinc-500 dark:text-zinc-400">
+                                    {formatTime(task.time)}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => handleOpenEditModal(task)}
+                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none"
+                                  title="Edit task"
+                                >
+                                  ⋮
+                                </button>
+                              </div>
                             </div>
+                            {task.priority && !task.completed && (
+                              <div
+                                className={`absolute bottom-0 left-0 right-0 h-[2px] ${getPriorityStripColor(
+                                  task.priority,
+                                )}`}
+                              />
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1317,6 +1672,196 @@ export default function DailyPlan({
           </div>
         </div>
       )}
+
+      {/* Edit Task Modal */}
+      <Modal
+        isOpen={editingTask !== null}
+        onClose={() => setEditingTask(null)}
+        title="Edit Task"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            {showDeleteConfirm ? (
+              <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <span className="text-sm font-semibold text-red-500 dark:text-red-400">
+                  Delete task permanently?
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 text-xs font-semibold rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                  >
+                    No, cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (editingTask) {
+                        handleDeleteTask(editingTask.id);
+                        setEditingTask(null);
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-red-500 hover:bg-red-650 dark:bg-red-600 dark:hover:bg-red-700 text-white text-xs font-semibold rounded-xl transition-all active:scale-95 shadow-md shadow-red-950/20 cursor-pointer"
+                  >
+                    Yes, delete
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="px-4 py-2 text-red-500 hover:text-red-650 dark:hover:text-red-400 font-semibold text-sm transition-colors hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl cursor-pointer"
+                >
+                  🗑️ Delete Task
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTask(null)}
+                    className="px-4 py-2 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 text-sm font-semibold rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveEditTask}
+                    className="px-5 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl text-sm font-semibold transition-all active:scale-95 shadow-md shadow-indigo-950/20 cursor-pointer"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        }
+      >
+        <div className="space-y-4 pt-1">
+          {/* Task Name */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 tracking-wide uppercase">
+              Task Name
+            </label>
+            <Input
+              value={editTaskText}
+              onChange={(e) => setEditTaskText(e.target.value)}
+              placeholder="Task name..."
+              className="w-full bg-white dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white"
+            />
+          </div>
+
+          {/* Importance / Priority */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 tracking-wide uppercase">
+              Importance
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["low", "medium", "high"] as const).map((prio) => (
+                <button
+                  key={prio}
+                  type="button"
+                  onClick={() => setEditTaskPriority(prio)}
+                  className={`py-2 rounded-xl text-xs font-bold capitalize border transition-all cursor-pointer ${
+                    editTaskPriority === prio
+                      ? prio === "high"
+                        ? "bg-red-500/10 text-red-600 border-red-500/30 dark:bg-red-500/20 dark:text-red-400"
+                        : prio === "medium"
+                          ? "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:bg-blue-500/20 dark:text-blue-400"
+                          : "bg-green-500/10 text-green-600 border-green-500/30 dark:bg-green-500/20 dark:text-green-400"
+                      : "bg-transparent border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400"
+                  }`}
+                >
+                  {prio}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Part of Day & Specific Time */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Part of Day */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 tracking-wide uppercase">
+                Part of Day
+              </label>
+              <select
+                value={editTaskTimeOfDay}
+                onChange={(e) => {
+                  const val = e.target.value as
+                    "morning" | "midday" | "evening";
+                  setEditTaskTimeOfDay(val);
+                  // Automatically adjust start time if it was set
+                  if (editTaskTime) {
+                    if (val === "morning") setEditTaskTime("09:00");
+                    else if (val === "midday") setEditTaskTime("13:00");
+                    else if (val === "evening") setEditTaskTime("19:00");
+                  }
+                }}
+                className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
+              >
+                <option value="morning">🌅 Morning</option>
+                <option value="midday">☀️ Midday</option>
+                <option value="evening">🌙 Evening</option>
+              </select>
+            </div>
+
+            {/* Specific Time */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 tracking-wide uppercase">
+                Start Time
+              </label>
+              <div className="flex gap-2 items-center">
+                {editTaskTime !== undefined ? (
+                  <div className="relative flex-1 flex items-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-1.5 text-sm text-zinc-900 dark:text-white">
+                    <input
+                      type="time"
+                      value={editTaskTime}
+                      onChange={(e) => {
+                        setEditTaskTime(e.target.value);
+                        if (e.target.value) {
+                          const hour = parseInt(
+                            e.target.value.split(":")[0],
+                            10,
+                          );
+                          if (hour >= 6 && hour < 12)
+                            setEditTaskTimeOfDay("morning");
+                          else if (hour >= 12 && hour < 18)
+                            setEditTaskTimeOfDay("midday");
+                          else setEditTaskTimeOfDay("evening");
+                        }
+                      }}
+                      className="bg-transparent border-none p-0 text-sm font-semibold focus:ring-0 focus:outline-none w-full text-zinc-900 dark:text-white cursor-pointer"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setEditTaskTime(undefined)}
+                      className="ml-2 text-zinc-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 cursor-pointer"
+                      title="Clear specific time"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      let defaultTime = "09:00";
+                      if (editTaskTimeOfDay === "midday") defaultTime = "13:00";
+                      else if (editTaskTimeOfDay === "evening")
+                        defaultTime = "19:00";
+                      setEditTaskTime(defaultTime);
+                    }}
+                    className="w-full py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-semibold bg-purple-500/5 hover:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-dashed hover:border-purple-500/35 transition-colors cursor-pointer"
+                  >
+                    + Add Time
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

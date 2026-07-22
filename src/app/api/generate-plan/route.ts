@@ -36,7 +36,7 @@ Please analyze the tasks and create an organized daily plan. Consider:
 1. Prioritizing tasks by importance and urgency
 2. Grouping related tasks together
 3. Assigning tasks to appropriate time blocks (morning, midday, evening)
-4. Suggesting optimal timing based on work hours and meal times
+4. Suggesting optimal timing based on work hours and meal times. Extract/guess specific start time for each task (e.g. if a task says 'meeting at 2pm', start time is '14:00'. If it's a morning task, guess a suitable start time like '09:00').
 5. Adding estimated time for each task
 6. Categorizing tasks (work, personal, health, etc.)
 
@@ -50,16 +50,17 @@ Return your response in the following JSON format:
   "summary": "Brief summary of the day's plan",
   "tasks": [
     {
-      "text": "Task description with suggested timing",
+      "text": "Task description without the time information (since it goes to time field)",
       "priority": "high|medium|low",
       "estimatedTime": 30,
       "category": "work|personal|health|errands",
-      "timeOfDay": "morning|midday|evening"
+      "timeOfDay": "morning|midday|evening",
+      "time": "HH:MM"
     }
   ]
 }
 
-Make sure the response is valid JSON and includes all tasks from the user's input, plus any additional suggestions for a productive day. Each task MUST have a timeOfDay assigned.`;
+Make sure the response is valid JSON and includes all tasks from the user's input, plus any additional suggestions for a productive day. Each task MUST have a timeOfDay assigned. The "time" field is optional, but should be guessed/inferred for as many tasks as possible in 24-hour HH:MM format.`;
 
     const modelName = "gemini-3.1-flash-lite";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
@@ -112,6 +113,7 @@ Make sure the response is valid JSON and includes all tasks from the user's inpu
         estimatedTime: task.estimatedTime ?? undefined,
         category: task.category ?? undefined,
         timeOfDay: task.timeOfDay || "morning",
+        time: task.time || undefined,
       }));
 
       return NextResponse.json({ tasks, summary: parsed.summary || "AI-generated daily plan" });

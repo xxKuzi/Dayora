@@ -14,6 +14,7 @@ export interface DailyTask {
   estimatedTime?: number;
   category?: string;
   timeOfDay?: "morning" | "midday" | "evening";
+  time?: string;
 }
 
 export interface AIGeneratedPlan {
