@@ -17,7 +17,7 @@ export default function PrivacyPolicy() {
   }, []);
 
   return (
-    <div className={`min-h-screen w-full flex flex-col items-center justify-center p-4 md:p-8 transition-colors duration-300 relative ${isDark ? "dark bg-zinc-950" : "bg-zinc-50"}`}>
+    <div className={`min-h-screen w-full flex flex-col items-center md:justify-center p-4 md:p-8 transition-colors duration-300 relative ${isDark ? "dark bg-zinc-950" : "bg-zinc-50"}`}>
       {/* Background Gradient Effect matching App.css */}
       <div className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-20 bg-gradient-to-br from-[#76376b] to-[#4a6ca4] dark:from-[#573776] dark:to-[#4a5ba4]" />
 
@@ -39,7 +39,7 @@ export default function PrivacyPolicy() {
         </div>
 
         {/* Content */}
-        <div className="space-y-6 text-sm leading-relaxed max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+        <div className="space-y-6 text-sm leading-relaxed md:max-h-[60vh] md:overflow-y-auto md:pr-2 custom-scrollbar">
           <section className="space-y-2">
             <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
               1. Introduction

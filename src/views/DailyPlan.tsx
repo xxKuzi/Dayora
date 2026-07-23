@@ -22,6 +22,7 @@ interface DailyPlanProps {
   onUpgradeClick?: () => void;
   isLoading?: boolean;
   onNavigateToSettings?: () => void;
+  onMenuClick?: () => void;
 }
 
 const formatTime = (timeStr: string | undefined): string => {
@@ -159,6 +160,7 @@ export default function DailyPlan({
   onUpgradeClick,
   isLoading = false,
   onNavigateToSettings,
+  onMenuClick,
 }: DailyPlanProps) {
   const [showSettingsTip, setShowSettingsTip] = useState(() => {
     if (typeof window !== "undefined") {
@@ -846,6 +848,28 @@ export default function DailyPlan({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <div>
               <div className="flex items-center gap-3">
+                {onMenuClick && (
+                  <button
+                    onClick={onMenuClick}
+                    className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl cursor-pointer shrink-0 md:hidden"
+                    title="Open folders menu"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      stroke="currentColor"
+                      className="w-6 h-6 text-zinc-700 dark:text-zinc-300"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                      />
+                    </svg>
+                  </button>
+                )}
                 <h1 className="text-4xl font-bold text-zinc-900 dark:text-white">
                   Daily Plan
                 </h1>
@@ -978,7 +1002,8 @@ export default function DailyPlan({
                   Adjust planner preferences
                 </h4>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  Tailor the planner and AI generation to your schedule, work hours, habits, and goals.
+                  Tailor the planner and AI generation to your schedule, work
+                  hours, habits, and goals.
                 </p>
               </div>
             </div>
@@ -1414,7 +1439,8 @@ export default function DailyPlan({
                 <div className="text-center mt-3">
                   {isPro ? (
                     <span className="text-xs text-purple-400 font-semibold">
-                      ✨ Pro Member: {20 - (dailyUsage?.aiCount || 0)} of 20 daily prompts remaining
+                      ✨ Pro Member: {20 - (dailyUsage?.aiCount || 0)} of 20
+                      daily prompts remaining
                     </span>
                   ) : user ? (
                     !user.emailVerified ? (
@@ -1602,18 +1628,7 @@ export default function DailyPlan({
                                     {formatTime(task.time)}
                                   </span>
                                 )}
-                                <button
-                                  onClick={() =>
-                                    onMoveTaskToTomorrow?.(
-                                      task.id,
-                                      dailyPlan.date,
-                                    )
-                                  }
-                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center text-sm no-print"
-                                  title="Move to tomorrow"
-                                >
-                                  ➡️
-                                </button>
+
                                 <button
                                   onClick={() => handleOpenEditModal(task)}
                                   className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none no-print"
@@ -1717,18 +1732,7 @@ export default function DailyPlan({
                                     {formatTime(task.time)}
                                   </span>
                                 )}
-                                <button
-                                  onClick={() =>
-                                    onMoveTaskToTomorrow?.(
-                                      task.id,
-                                      dailyPlan.date,
-                                    )
-                                  }
-                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center text-sm no-print"
-                                  title="Move to tomorrow"
-                                >
-                                  ➡️
-                                </button>
+
                                 <button
                                   onClick={() => handleOpenEditModal(task)}
                                   className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none no-print"
@@ -1832,18 +1836,7 @@ export default function DailyPlan({
                                     {formatTime(task.time)}
                                   </span>
                                 )}
-                                <button
-                                  onClick={() =>
-                                    onMoveTaskToTomorrow?.(
-                                      task.id,
-                                      dailyPlan.date,
-                                    )
-                                  }
-                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center text-sm no-print"
-                                  title="Move to tomorrow"
-                                >
-                                  ➡️
-                                </button>
+
                                 <button
                                   onClick={() => handleOpenEditModal(task)}
                                   className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none no-print"
@@ -1947,18 +1940,7 @@ export default function DailyPlan({
                                     {formatTime(task.time)}
                                   </span>
                                 )}
-                                <button
-                                  onClick={() =>
-                                    onMoveTaskToTomorrow?.(
-                                      task.id,
-                                      dailyPlan.date,
-                                    )
-                                  }
-                                  className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center text-sm no-print"
-                                  title="Move to tomorrow"
-                                >
-                                  ➡️
-                                </button>
+
                                 <button
                                   onClick={() => handleOpenEditModal(task)}
                                   className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer flex items-center justify-center font-bold text-lg leading-none no-print"

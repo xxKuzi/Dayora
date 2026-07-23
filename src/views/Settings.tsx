@@ -10,6 +10,7 @@ interface SettingsProps {
   isPro: boolean;
   onUpgradeClick: () => void;
   onSignOutClick: () => void;
+  onMenuClick?: () => void;
 }
 
 export default function Settings({
@@ -19,6 +20,7 @@ export default function Settings({
   isPro,
   onUpgradeClick,
   onSignOutClick,
+  onMenuClick,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<
     "profile" | "schedule" | "habits" | "goals"
@@ -236,8 +238,28 @@ export default function Settings({
   return (
     <div className="p-6 bg-gray-900 text-white min-h-screen shrink-0">
       <div className="max-w-4xl mx-auto">
-        <div className={`mb-8 pt-8 ${!isEditing ? "text-center" : ""}`}>
-          <h1 className="text-4xl font-bold text-white mb-2">Settings</h1>
+        <div className={`mb-8 pt-8 ${!isEditing ? "text-center flex flex-col items-center" : ""}`}>
+          <div className={`flex items-center gap-3 mb-2 ${!isEditing ? "justify-center" : "justify-start"}`}>
+            {onMenuClick && (
+              <button
+                onClick={onMenuClick}
+                className="p-2 hover:bg-white/5 rounded-xl cursor-pointer shrink-0 md:hidden"
+                title="Open folders menu"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                  className="w-6 h-6 text-zinc-300"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+              </button>
+            )}
+            <h1 className="text-4xl font-bold text-white">Settings</h1>
+          </div>
           <p className="text-gray-400">
             Customize your daily schedule, habits, and goals
           </p>

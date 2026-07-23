@@ -6,12 +6,22 @@ export const metadata: Metadata = {
   description: "Organize your daily plan with AI assistance.",
   icons: {
     icon: "/logo-icon.svg",
+    apple: "/logo-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Dayora",
   },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1.0,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#76376b" },
+    { media: "(prefers-color-scheme: dark)", color: "#573776" },
+  ],
 };
 
 export default function RootLayout({

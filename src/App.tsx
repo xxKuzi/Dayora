@@ -47,6 +47,9 @@ export default function App() {
   const [isSynced, setIsSynced] = useState<boolean>(false);
   const [loadingAuth, setLoadingAuth] = useState<boolean>(true);
 
+  // Mobile responsiveness states
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
+
   // Monetization limits states
   const [isPro, setIsPro] = useState<boolean>(false);
   const [dailyUsage, setDailyUsage] = useState<{
@@ -263,6 +266,22 @@ const isDark = document.documentElement.classList.toggle('dark');
     } catch {
       console.warn("GEMINI_API_KEY not found in environment variables");
       setAiError("AI API key not configured");
+    }
+  }, []);
+
+  // Register Service Worker for PWA support
+  useEffect(() => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((registration) => {
+            console.log("Service Worker registered with scope:", registration.scope);
+          })
+          .catch((error) => {
+            console.error("Service Worker registration failed:", error);
+          });
+      });
     }
   }, []);
 
@@ -1302,8 +1321,58 @@ const isDark = document.documentElement.classList.toggle('dark');
   return (
     <div className={"w-full h-screen flex " + (isDark ? "dark" : "")}>
       <div className="w-full h-full flex text-zinc-900 dark:text-zinc-100">
+        {/* Mobile Sidebar Drawer */}
+        <div
+          className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 md:hidden ${
+            mobileSidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+        <div
+          className={`fixed left-0 top-0 h-screen bg-zinc-100 dark:bg-zinc-950 z-50 transition-transform duration-300 w-60 md:hidden border-r border-zinc-200/80 dark:border-zinc-800/80 ${
+            mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <Sidebar
+            folders={folders}
+            activeFolderId={activeFolderId}
+            onFolderSelect={(id) => {
+              setActiveFolderId(id);
+              setMobileSidebarOpen(false);
+            }}
+            onNewFolder={handleNewFolder}
+            onRenameFolder={handleRenameFolder}
+            onDeleteFolder={handleDeleteFolder}
+            notes={notes}
+            trashId={trashId}
+            activeView={activeView}
+            onViewChange={(view) => {
+              setActiveView(view);
+              setMobileSidebarOpen(false);
+            }}
+            user={user}
+            onSignInClick={() => {
+              setAuthModalOpen(true);
+              setMobileSidebarOpen(false);
+            }}
+            onSignOutClick={() => {
+              handleSignOut();
+              setMobileSidebarOpen(false);
+            }}
+            darkMode={darkMode}
+            onToggleDarkMode={handleToggleDarkMode}
+            isPro={isPro}
+            onUpgradeClick={() => {
+              setIsUpgradeModalOpen(true);
+              setMobileSidebarOpen(false);
+            }}
+            isLoading={loadingAuth || (user ? !isSynced : false)}
+          />
+        </div>
+
+        {/* Desktop Sidebar */}
         {sidebarVisible && (
-          <div className="fixed left-0 top-0 h-screen bg-zinc-100 dark:bg-zinc-950 z-10 no-print">
+          <div className="hidden md:block fixed left-0 top-0 h-screen bg-zinc-100 dark:bg-zinc-950 z-10 no-print">
             <Sidebar
               folders={folders}
               activeFolderId={activeFolderId}
@@ -1329,31 +1398,32 @@ const isDark = document.documentElement.classList.toggle('dark');
 
         {/* Main Content Area */}
         <div
-          className={`flex-1 h-screen flex flex-col overflow-y-auto bg-transparent print-full-width ${
+          className={`flex-1 h-screen flex flex-col overflow-y-auto bg-transparent print-full-width pb-16 md:pb-0 ${
             activeView === "notes"
               ? notesListVisible
                 ? sidebarVisible
-                  ? "ml-[560px]"
+                  ? "ml-0 md:ml-[560px]"
                   : comfortableTyping
-                    ? "ml-[400px]"
-                    : "ml-80"
+                    ? "ml-0 md:ml-[400px]"
+                    : "ml-0 md:ml-80"
                 : sidebarVisible
                   ? comfortableTyping
-                    ? "ml-80"
-                    : "ml-60"
+                    ? "ml-0 md:ml-80"
+                    : "ml-0 md:ml-60"
                   : comfortableTyping
-                    ? "ml-20"
-                    : ""
+                    ? "ml-0 md:ml-20"
+                    : "ml-0"
               : sidebarVisible
-                ? "ml-60"
-                : ""
+                ? "ml-0 md:ml-60"
+                : "ml-0"
           }`}
         >
           {activeView === "notes" && (
             <>
+              {/* Desktop NotesList Wrapper */}
               {notesListVisible && (
                 <div
-                  className={`fixed top-0 h-screen z-10 ${
+                  className={`hidden md:block fixed top-0 h-screen z-10 ${
                     sidebarVisible ? "left-60" : "left-0"
                   }`}
                 >
@@ -1373,23 +1443,61 @@ const isDark = document.documentElement.classList.toggle('dark');
                 </div>
               )}
 
-              <Editor
-                activeNote={activeNote}
-                draftTitle={draftTitle}
-                draftBody={draftBody}
-                onTitleChange={setDraftTitle}
-                onBodyChange={setDraftBody}
-                showLastEdited={sidebarVisible && notesListVisible}
-                sidebarVisible={sidebarVisible}
-                onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}
-                notesListVisible={notesListVisible}
-                onToggleNotesList={() => setNotesListVisible(!notesListVisible)}
-                comfortableTyping={comfortableTyping}
-                onToggleComfortableTyping={() =>
-                  setComfortableTyping(!comfortableTyping)
-                }
-                onToggleAllPanels={handleToggleAllPanels}
-              />
+              {/* Mobile NotesList Wrapper */}
+              <div className={`block md:hidden w-full h-screen ${activeNoteId === null ? "block" : "hidden"}`}>
+                <NotesList
+                  notes={visibleNotes}
+                  activeNoteId={activeNoteId}
+                  query={query}
+                  onQueryChange={setQuery}
+                  onNoteSelect={setActiveNoteId}
+                  onNewNote={handleNewNote}
+                  folders={folders}
+                  onTogglePin={togglePin}
+                  onDeleteNote={handleDeleteNote}
+                  onRestoreNote={handleRestoreNote}
+                  onMoveNote={handleMoveNote}
+                  onMenuClick={() => setMobileSidebarOpen(true)}
+                />
+              </div>
+
+              {/* Desktop Editor Wrapper */}
+              <div className="hidden md:block flex-1 h-full">
+                <Editor
+                  activeNote={activeNote}
+                  draftTitle={draftTitle}
+                  draftBody={draftBody}
+                  onTitleChange={setDraftTitle}
+                  onBodyChange={setDraftBody}
+                  showLastEdited={sidebarVisible && notesListVisible}
+                  sidebarVisible={sidebarVisible}
+                  onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}
+                  notesListVisible={notesListVisible}
+                  onToggleNotesList={() => setNotesListVisible(!notesListVisible)}
+                  comfortableTyping={comfortableTyping}
+                  onToggleComfortableTyping={() =>
+                    setComfortableTyping(!comfortableTyping)
+                  }
+                  onToggleAllPanels={handleToggleAllPanels}
+                />
+              </div>
+
+              {/* Mobile Editor Wrapper */}
+              <div className={`block md:hidden w-full h-screen ${activeNoteId !== null ? "block" : "hidden"}`}>
+                <Editor
+                  activeNote={activeNote}
+                  draftTitle={draftTitle}
+                  draftBody={draftBody}
+                  onTitleChange={setDraftTitle}
+                  onBodyChange={setDraftBody}
+                  showLastEdited={false}
+                  sidebarVisible={false}
+                  notesListVisible={false}
+                  comfortableTyping={comfortableTyping}
+                  onToggleAllPanels={undefined}
+                  onBack={() => setActiveNoteId(null)}
+                />
+              </div>
             </>
           )}
 
@@ -1413,6 +1521,7 @@ const isDark = document.documentElement.classList.toggle('dark');
               onUpgradeClick={() => setIsUpgradeModalOpen(true)}
               isLoading={loadingAuth || (user ? !isSynced : false)}
               onNavigateToSettings={() => setActiveView("settings")}
+              onMenuClick={() => setMobileSidebarOpen(true)}
             />
           )}
 
@@ -1424,10 +1533,44 @@ const isDark = document.documentElement.classList.toggle('dark');
               isPro={isPro}
               onUpgradeClick={() => setIsUpgradeModalOpen(true)}
               onSignOutClick={handleSignOut}
+              onMenuClick={() => setMobileSidebarOpen(true)}
             />
           )}
         </div>
       </div>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className={`fixed bottom-0 left-0 right-0 h-16 bg-white/90 dark:bg-zinc-950/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800/80 flex items-center justify-around z-30 no-print md:hidden ${
+        activeView === "notes" && activeNoteId !== null ? "hidden" : "flex"
+      }`}>
+        {[
+          { id: "notes", label: "Notes", icon: "📝" },
+          { id: "daily-plan", label: "Daily Plan", icon: "🎯" },
+          { id: "settings", label: "Settings", icon: "⚙️" },
+        ].map((tab) => {
+          const isActive = activeView === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => {
+                if (tab.id === "notes" && activeView === "notes") {
+                  setActiveNoteId(null);
+                } else {
+                  setActiveView(tab.id as any);
+                }
+              }}
+              className={`flex flex-col items-center justify-center w-20 h-full gap-0.5 cursor-pointer transition-colors ${
+                isActive
+                  ? "text-blue-600 dark:text-blue-400 font-semibold"
+                  : "text-zinc-500 dark:text-zinc-400"
+              }`}
+            >
+              <span className="text-xl leading-none">{tab.icon}</span>
+              <span className="text-[10px] tracking-wide">{tab.label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       {/* Cookie Banner */}
       {!loadingAuth && !user && cookiePreference === undefined && (
