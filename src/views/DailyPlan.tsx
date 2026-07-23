@@ -20,6 +20,7 @@ interface DailyPlanProps {
   dailyUsage?: { emailCount: number; aiCount: number };
   anonAiCount?: number;
   onUpgradeClick?: () => void;
+  isLoading?: boolean;
 }
 
 const formatTime = (timeStr: string | undefined): string => {
@@ -155,6 +156,7 @@ export default function DailyPlan({
   dailyUsage = { emailCount: 0, aiCount: 0 },
   anonAiCount = 0,
   onUpgradeClick,
+  isLoading = false,
 }: DailyPlanProps) {
   const [rawTasks, setRawTasks] = useState(() => {
     if (typeof window !== "undefined") {
@@ -455,7 +457,6 @@ export default function DailyPlan({
       });
 
       const data = await response.json().catch(() => ({}));
-
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to send email");
@@ -881,7 +882,12 @@ export default function DailyPlan({
               </p>
             </div>
 
-            {dailyPlan && (
+            {isLoading ? (
+              <div className="text-right flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-start gap-2 shrink-0 animate-pulse">
+                <div className="h-9 w-16 bg-black/10 dark:bg-white/10 rounded-xl" />
+                <div className="h-4 w-24 bg-black/10 dark:bg-white/10 rounded-lg mt-1" />
+              </div>
+            ) : (
               <div className="text-right flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-start gap-2 shrink-0">
                 <div className="text-3xl font-bold text-zinc-900 dark:text-white">
                   {completedTasks}/{totalTasks}
@@ -893,26 +899,38 @@ export default function DailyPlan({
             )}
           </div>
 
-          {/* Progress Bar & Actions - only when plan exists */}
-          {dailyPlan && (
-            <>
-              <div className="w-full bg-white/60 dark:bg-black/50 rounded-full h-3 no-print">
-                <div
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${progressPercentage}%` }}
-                />
-              </div>
+          {/* Progress Bar & Actions - always rendered to prevent layout shifts */}
+          <div className="w-full bg-white/60 dark:bg-black/50 rounded-full h-3 no-print mt-2">
+            {isLoading ? (
+              <div className="bg-black/10 dark:bg-white/10 h-3 rounded-full animate-pulse w-full" />
+            ) : (
+              <div
+                className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-300"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            )}
+          </div>
 
-              <div className="flex gap-3 mt-4 justify-end no-print">
+          <div className="flex gap-3 mt-4 justify-end no-print">
+            {isLoading ? (
+              <>
+                <div className="w-[110px] h-9 bg-black/10 dark:bg-white/10 rounded-xl animate-pulse" />
+                <div className="w-[110px] h-9 bg-black/10 dark:bg-white/10 rounded-xl animate-pulse" />
+                <div className="w-[110px] h-9 bg-black/10 dark:bg-white/10 rounded-xl animate-pulse" />
+              </>
+            ) : (
+              <>
                 <button
                   onClick={handlePrint}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border border-black/15 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-800/80 hover:border-black/25 dark:hover:border-gray-700 active:scale-95 flex items-center gap-2 cursor-pointer"
+                  disabled={totalTasks === 0}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border border-black/15 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-800/80 hover:border-black/25 dark:hover:border-gray-700 active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white/60 dark:disabled:hover:bg-gray-900/60 disabled:hover:border-black/15 dark:disabled:hover:border-gray-800 disabled:scale-100"
                 >
                   <span>🖨️</span> Print Plan
                 </button>
                 <button
                   onClick={handleExportMarkdown}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border border-black/15 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-800/80 hover:border-black/25 dark:hover:border-gray-700 active:scale-95 flex items-center gap-2 cursor-pointer"
+                  disabled={totalTasks === 0}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border border-black/15 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 text-zinc-600 dark:text-gray-300 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-800/80 hover:border-black/25 dark:hover:border-gray-700 active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white/60 dark:disabled:hover:bg-gray-900/60 disabled:hover:border-black/15 dark:disabled:hover:border-gray-800 disabled:scale-100"
                 >
                   <span>⬇️</span> Export MD
                 </button>
@@ -924,13 +942,14 @@ export default function DailyPlan({
                       setIsEmailModalOpen(true);
                     }
                   }}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 bg-purple-600 hover:bg-purple-700 text-white border border-transparent shadow-md shadow-purple-900/20 active:scale-95 flex items-center gap-2 cursor-pointer"
+                  disabled={totalTasks === 0}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 bg-purple-600 hover:bg-purple-700 text-white border border-transparent shadow-md shadow-purple-900/20 active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-purple-600 disabled:scale-100"
                 >
                   <span>✉️</span> Email Plan
                 </button>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </div>
 
         {/* AI or MANUAL Generation */}
@@ -1056,6 +1075,7 @@ export default function DailyPlan({
                         }
                         placeholder="Task name..."
                         className="flex-1 bg-white dark:bg-gray-800 border border-black/15 dark:border-gray-700 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-gray-500"
+                        disabled={isLoading}
                       />
                       <select
                         value={task.priority || "medium"}
@@ -1067,6 +1087,7 @@ export default function DailyPlan({
                           )
                         }
                         className="w-32 px-3 py-2 bg-white dark:bg-gray-800 border border-black/15 dark:border-gray-700 rounded text-zinc-900 dark:text-white"
+                        disabled={isLoading}
                       >
                         <option value="low">Low</option>
                         <option value="medium">Medium</option>
@@ -1102,11 +1123,12 @@ export default function DailyPlan({
                               )
                             }
                             title={time.title}
-                            className={`px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer border ${
+                            disabled={isLoading}
+                            className={`px-3 py-1 rounded text-sm font-medium transition-colors border ${
                               task.timeOfDay === time.key
                                 ? `${getTimeOfDayColor(time.key)} border-transparent`
                                 : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 border-zinc-200/50 dark:border-zinc-700/50"
-                            }`}
+                            } ${isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                           >
                             {time.label}
                           </button>
@@ -1125,6 +1147,7 @@ export default function DailyPlan({
                                   e.target.value,
                                 )
                               }
+                              disabled={isLoading}
                               className="bg-transparent border-none p-0 text-xs font-semibold focus:ring-0 focus:outline-none w-16 text-zinc-900 dark:text-white cursor-pointer"
                             />
                             <button
@@ -1132,7 +1155,8 @@ export default function DailyPlan({
                               onClick={() =>
                                 handleTableTaskChange(index, "time", undefined)
                               }
-                              className="ml-1 text-zinc-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 cursor-pointer"
+                              disabled={isLoading}
+                              className="ml-1 text-zinc-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 cursor-pointer disabled:opacity-50"
                               title="Clear specific time"
                             >
                               ✕
@@ -1149,7 +1173,8 @@ export default function DailyPlan({
                                 defaultTime = "19:00";
                               handleTableTaskChange(index, "time", defaultTime);
                             }}
-                            className="px-2 py-1 rounded text-xs font-medium bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:border-purple-500/35 transition-colors cursor-pointer"
+                            disabled={isLoading}
+                            className="px-2 py-1 rounded text-xs font-medium bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:border-purple-500/35 transition-colors cursor-pointer disabled:opacity-50"
                             title="Add specific start time"
                           >
                             + Time
@@ -1161,7 +1186,8 @@ export default function DailyPlan({
                           <button
                             tabIndex={-1}
                             onClick={() => handleRemoveTableTask(index)}
-                            className="text-red-400 hover:text-red-300 cursor-pointer"
+                            disabled={isLoading}
+                            className="text-red-400 hover:text-red-300 cursor-pointer disabled:opacity-50"
                           >
                             🗑️
                           </button>
@@ -1171,6 +1197,7 @@ export default function DailyPlan({
                   ))}
                   <Button
                     onClick={handleAddTableTask}
+                    disabled={isLoading}
                     className="!bg-black/5 dark:!bg-gray-700 hover:!bg-black/10 dark:hover:!bg-gray-600 !text-zinc-700 dark:!text-white !border-black/10 dark:!border-gray-600 hover:!scale-100 mt-4"
                   >
                     + Add Task
@@ -1207,6 +1234,7 @@ export default function DailyPlan({
                     onKeyDown={handleKeyPress}
                     placeholder="Write your tasks here... e.g., 'Meeting with team at 2pm, finish project report, buy groceries, call mom'"
                     className="w-full min-h-[120px] !bg-transparent !border-none !px-4 !py-3 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-gray-500 focus:ring-0 focus:outline-none"
+                    disabled={isLoading}
                   />
                   <div className="flex items-center justify-between px-4 py-2 bg-black/5 dark:bg-gray-950/40 border-t border-black/10 dark:border-gray-800/80">
                     <div className="text-xs text-gray-500 flex items-center gap-1.5">
@@ -1221,11 +1249,12 @@ export default function DailyPlan({
                       <button
                         type="button"
                         onClick={handleToggleVoiceRecord}
+                        disabled={isLoading}
                         className={`p-2 rounded-lg transition-all duration-200 flex items-center justify-center ${
                           isRecording
                             ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
                             : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700"
-                        }`}
+                        } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                         title={
                           isRecording ? "Stop recording" : "Record voice input"
                         }
@@ -1283,12 +1312,14 @@ export default function DailyPlan({
                               : "Task - time - importance"
                           }
                           className="flex-1 !bg-transparent !border-none !p-0 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-gray-500 focus:!ring-0 focus:!outline-none focus:!ring-transparent"
+                          disabled={isLoading}
                         />
                         {tableTasks.length > 1 && (
                           <button
                             tabIndex={-1}
                             onClick={() => handleRemoveTableTask(index)}
-                            className="text-zinc-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 ml-2 cursor-pointer transition-colors"
+                            disabled={isLoading}
+                            className="text-zinc-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 ml-2 cursor-pointer transition-colors disabled:opacity-50"
                           >
                             ✕
                           </button>
@@ -1298,6 +1329,7 @@ export default function DailyPlan({
                   </div>
                   <Button
                     onClick={handleAddTableTask}
+                    disabled={isLoading}
                     className="!bg-black/5 dark:!bg-gray-700 hover:!bg-black/10 dark:hover:!bg-gray-600 !text-zinc-700 dark:!text-white !border-black/10 dark:!border-gray-600 hover:!scale-100 mt-4"
                   >
                     + Add Task
@@ -1310,13 +1342,14 @@ export default function DailyPlan({
               <Button
                 onClick={handleGeneratePlan}
                 disabled={
-                  !useAIMode
+                  isLoading ||
+                  (!useAIMode
                     ? !tableTasks.some((task) => task.text?.trim())
                     : useTableMode
                       ? !tableTasks.some((task) =>
                           (task as any).rawText?.trim(),
                         )
-                      : !rawTasks.trim() || isGenerating
+                      : !rawTasks.trim() || isGenerating)
                 }
                 className="!bg-gradient-to-r !from-blue-500 !to-indigo-600 hover:!from-blue-600 hover:!to-indigo-700 dark:!bg-none dark:!bg-blue-600 dark:hover:!bg-blue-700 !text-white !border-none !backdrop-blur-none flex-1 hover:!scale-100 shadow-md"
               >
@@ -1330,14 +1363,14 @@ export default function DailyPlan({
               </Button>
 
               {useAIMode && (
-                <div className="text-center mt-1">
+                <div className="text-center mt-3">
                   {isPro ? (
-                    <span className="text-xs text-purple-400 font-semibold flex items-center gap-1 justify-center">
-                      ✨ Pro Member: Unlimited AI plan generation
+                    <span className="text-xs text-purple-400 font-semibold">
+                      ✨ Pro Member: {20 - (dailyUsage?.aiCount || 0)} of 20 daily prompts remaining
                     </span>
                   ) : user ? (
                     !user.emailVerified ? (
-                      <span className="text-xs text-red-500 dark:text-red-400 font-semibold flex items-center gap-1.5 justify-center">
+                      <span className="text-xs text-red-500 dark:text-red-400 font-semibold">
                         🔒 Please verify your email to use AI plan generation.
                         Please check SPAM Folder.{" "}
                         <button
@@ -1371,7 +1404,7 @@ export default function DailyPlan({
         </div>
 
         {/* Empty state message when there's no plan */}
-        {!dailyPlan && (
+        {!isLoading && !dailyPlan && (
           <div className="text-center pb-4 pt-8 px-6 bg-white/40 dark:bg-black/20 border border-dashed border-black/15 dark:border-white/5 rounded-2xl mb-8">
             <div className="text-3xl mb-2">📅</div>
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-1">
@@ -1380,6 +1413,54 @@ export default function DailyPlan({
             <p className="text-sm text-zinc-500 dark:text-gray-400 mb-4 max-w-md mx-auto">
               Start planning your day by adding tasks below plan.
             </p>
+          </div>
+        )}
+
+        {/* Loading skeleton for tasks */}
+        {isLoading && !dailyPlan && (
+          <div className="space-y-12 mt-12 animate-pulse no-print mb-8">
+            {/* Morning skeleton */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-6 w-24 bg-black/10 dark:bg-white/10 rounded-lg" />
+                <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
+                <div className="h-4 w-28 bg-black/10 dark:bg-white/10 rounded-lg" />
+              </div>
+              <div className="space-y-3">
+                {[1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="p-4 rounded-xl border border-black/10 dark:border-white/5 bg-white/40 dark:bg-black/20 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3 w-full">
+                      <div className="w-5 h-5 rounded bg-black/10 dark:bg-white/10" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-black/10 dark:bg-white/10 rounded w-3/4" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Midday skeleton */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-6 w-24 bg-black/10 dark:bg-white/10 rounded-lg" />
+                <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
+                <div className="h-4 w-28 bg-black/10 dark:bg-white/10 rounded-lg" />
+              </div>
+              <div className="space-y-3">
+                <div className="p-4 rounded-xl border border-black/10 dark:border-white/5 bg-white/40 dark:bg-black/20 flex items-center justify-between">
+                  <div className="flex items-center gap-3 w-full">
+                    <div className="w-5 h-5 rounded bg-black/10 dark:bg-white/10" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-black/10 dark:bg-white/10 rounded w-1/2" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1880,7 +1961,9 @@ export default function DailyPlan({
             </button>
           ) : !user ||
             isEmailRestricted ||
-            (!isPro && ((dailyUsage?.emailCount ?? 0) >= 1 || emailErrorMsg === "EMAIL_LIMIT_EXCEEDED")) ? (
+            (!isPro &&
+              ((dailyUsage?.emailCount ?? 0) >= 1 ||
+                emailErrorMsg === "EMAIL_LIMIT_EXCEEDED")) ? (
             <button
               onClick={() => {
                 setIsEmailModalOpen(false);
@@ -1990,7 +2073,9 @@ export default function DailyPlan({
               )}
             </div>
           </div>
-        ) : !isPro && ((dailyUsage?.emailCount ?? 0) >= 1 || emailErrorMsg === "EMAIL_LIMIT_EXCEEDED") ? (
+        ) : !isPro &&
+          ((dailyUsage?.emailCount ?? 0) >= 1 ||
+            emailErrorMsg === "EMAIL_LIMIT_EXCEEDED") ? (
           <div className="space-y-4">
             <div className="p-4 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40 rounded-xl text-center">
               <span className="text-3xl mb-2 block">⭐</span>

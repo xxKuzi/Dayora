@@ -12,6 +12,7 @@ interface InputProps {
   max?: string;
   autoFocus?: boolean;
   required?: boolean;
+  disabled?: boolean;
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -28,6 +29,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       max,
       autoFocus,
       required,
+      disabled,
     },
     ref,
   ) => {
@@ -44,7 +46,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         max={max}
         autoFocus={autoFocus}
         required={required}
-        className={`px-3 py-2 rounded-lg bg-white/20 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 outline-none focus:ring-2 focus:ring-blue-500/50 border border-white/30 dark:border-zinc-600/50 backdrop-blur-sm transition-all duration-200 ${className}`}
+        disabled={disabled}
+        className={`px-3 py-2 rounded-lg bg-white/20 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 outline-none focus:ring-2 focus:ring-blue-500/50 border border-white/30 dark:border-zinc-600/50 backdrop-blur-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       />
     );
   },

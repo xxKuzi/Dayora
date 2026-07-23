@@ -6,6 +6,7 @@ interface TextareaProps {
   placeholder?: string;
   className?: string;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  disabled?: boolean;
 }
 
 export default function Textarea({
@@ -14,6 +15,7 @@ export default function Textarea({
   placeholder,
   className = "",
   onKeyDown,
+  disabled,
 }: TextareaProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -76,7 +78,8 @@ export default function Textarea({
       onChange={onChange}
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
-      className={`w-full resize-none bg-transparent outline-none leading-relaxed px-3 py-2 rounded-lg text-zinc-100 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:ring-0 focus:outline-none transition-all duration-200 ${className}`}
+      disabled={disabled}
+      className={`w-full resize-none bg-transparent outline-none leading-relaxed px-3 py-2 rounded-lg text-zinc-100 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:ring-0 focus:outline-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
     />
   );
 }

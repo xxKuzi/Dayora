@@ -403,6 +403,11 @@ export default function App() {
   async function handleSignOut() {
     if (!auth) return;
     try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("dayora_v1");
+        localStorage.setItem("dayora_user_logged_in", "false");
+        localStorage.setItem("dayora_is_pro", "false");
+      }
       await signOut(auth);
     } catch (err) {
       console.error("Sign out failed:", err);
@@ -436,6 +441,9 @@ export default function App() {
       setUser(firebaseUser);
       if (firebaseUser) {
         setIsSynced(false);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("dayora_user_logged_in", "true");
+        }
         try {
           const userDocRef = doc(db!, "users", firebaseUser.uid);
 
@@ -468,7 +476,11 @@ export default function App() {
             where("status", "in", ["active", "trialing"]),
           );
           unsubSubsDoc = onSnapshot(subsQuery, (snap) => {
-            setIsPro(!snap.empty);
+            const hasPro = !snap.empty;
+            setIsPro(hasPro);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("dayora_is_pro", String(hasPro));
+            }
           });
 
           // Setup real-time listener for daily usage document
@@ -573,6 +585,10 @@ export default function App() {
         setIsPro(false);
         setDailyUsage({ emailCount: 0, aiCount: 0 });
         setIsSynced(false);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("dayora_user_logged_in", "false");
+          localStorage.setItem("dayora_is_pro", "false");
+        }
         const localData = load() as AppState | null;
         if (localData) {
           setFolders(localData.folders);
@@ -1222,6 +1238,7 @@ export default function App() {
               onToggleDarkMode={handleToggleDarkMode}
               isPro={isPro}
               onUpgradeClick={() => setIsUpgradeModalOpen(true)}
+              isLoading={loadingAuth || (user ? !isSynced : false)}
             />
           </div>
         )}
@@ -1310,6 +1327,7 @@ export default function App() {
               dailyUsage={dailyUsage}
               anonAiCount={anonAiCount}
               onUpgradeClick={() => setIsUpgradeModalOpen(true)}
+              isLoading={loadingAuth || (user ? !isSynced : false)}
             />
           )}
 

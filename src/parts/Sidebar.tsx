@@ -22,6 +22,7 @@ interface SidebarProps {
   onToggleDarkMode: () => void;
   isPro?: boolean;
   onUpgradeClick?: () => void;
+  isLoading?: boolean;
 }
 
 export default function Sidebar({
@@ -42,8 +43,22 @@ export default function Sidebar({
   onToggleDarkMode,
   isPro = false,
   onUpgradeClick,
+  isLoading = false,
 }: SidebarProps) {
   const [isMac, setIsMac] = useState(false);
+  const [wasLoggedIn, setWasLoggedIn] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("dayora_user_logged_in") === "true";
+    }
+    return false;
+  });
+  const [wasPro, setWasPro] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("dayora_is_pro") === "true";
+    }
+    return false;
+  });
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       setIsMac(
@@ -51,6 +66,13 @@ export default function Sidebar({
       );
     }
   }, []);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setWasLoggedIn(!!user);
+      setWasPro(isPro);
+    }
+  }, [isLoading, user, isPro]);
 
   const regularFolders = folders.filter(
     (f) => f.id !== trashId && f.name !== "Trash",
@@ -105,74 +127,89 @@ export default function Sidebar({
               <h2 className="text-xs font-semibold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
                 Folders
               </h2>
-              <Button onClick={onNewFolder} size="sm">
+              <Button onClick={onNewFolder} size="sm" disabled={isLoading}>
                 New
               </Button>
             </div>
 
-            <div className="flex-1 overflow-auto space-y-1 pr-1">
-              {regularFolders.map((f) => (
-                <div
-                  key={f.id}
-                  className={`group/folder flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                    activeFolderId === f.id
-                      ? "bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-900 dark:text-zinc-100 font-medium"
-                      : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
-                  }`}
-                  onClick={() => onFolderSelect(f.id)}
-                >
-                  <span className="truncate flex-1">{f.name}</span>
-                  <div className="flex items-center gap-1.5 ml-2">
-                    <div className="opacity-0 group-hover/folder:opacity-100 flex items-center gap-1 transition-opacity">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRenameFolder(f.id);
-                        }}
-                        title="Rename folder"
-                        className="p-0.5 text-xs text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded transition-colors"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteFolder(f.id);
-                        }}
-                        title="Delete folder"
-                        className="p-0.5 text-xs text-zinc-400 hover:text-red-500 rounded transition-colors"
-                      >
-                        🗑️
-                      </button>
+            {isLoading ? (
+              <div className="flex-1 flex flex-col min-h-0 gap-3">
+                <div className="flex-1 overflow-auto space-y-2 pr-1 animate-pulse">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-9 bg-black/5 dark:bg-white/5 rounded-lg w-full" />
+                  ))}
+                </div>
+                <div className="pt-2 border-t border-zinc-200/80 dark:border-zinc-800/80 animate-pulse">
+                  <div className="h-9 bg-black/5 dark:bg-white/5 rounded-lg w-full" />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex-1 overflow-auto space-y-1 pr-1">
+                  {regularFolders.map((f) => (
+                    <div
+                      key={f.id}
+                      className={`group/folder flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                        activeFolderId === f.id
+                          ? "bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-900 dark:text-zinc-100 font-medium"
+                          : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
+                      }`}
+                      onClick={() => onFolderSelect(f.id)}
+                    >
+                      <span className="truncate flex-1">{f.name}</span>
+                      <div className="flex items-center gap-1.5 ml-2">
+                        <div className="opacity-0 group-hover/folder:opacity-100 flex items-center gap-1 transition-opacity">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRenameFolder(f.id);
+                            }}
+                            title="Rename folder"
+                            className="p-0.5 text-xs text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded transition-colors"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteFolder(f.id);
+                            }}
+                            title="Delete folder"
+                            className="p-0.5 text-xs text-zinc-400 hover:text-red-500 rounded transition-colors"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                        <span className="text-xs opacity-60">
+                          {countInFolder(f.id, notes, folders, trashId)}
+                        </span>
+                      </div>
                     </div>
+                  ))}
+                </div>
+
+                {/* Bottom section containing Trash folder */}
+                <div className="pt-2 border-t border-zinc-200/80 dark:border-zinc-800/80 space-y-2">
+                  <div
+                    key={trashFolder.id}
+                    className={`group/folder flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                      activeFolderId === trashFolder.id
+                        ? "bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-900 dark:text-zinc-100 font-medium"
+                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
+                    }`}
+                    onClick={() => onFolderSelect(trashFolder.id)}
+                  >
+                    <span className="truncate flex-1 flex items-center gap-2">
+                      <span className="text-base leading-none">🗑️</span>
+                      <span>{trashFolder.name}</span>
+                    </span>
                     <span className="text-xs opacity-60">
-                      {countInFolder(f.id, notes, folders, trashId)}
+                      {countInFolder(trashFolder.id, notes, folders, trashId)}
                     </span>
                   </div>
                 </div>
-              ))}
-            </div>
-
-            {/* Bottom section containing Trash folder */}
-            <div className="pt-2 border-t border-zinc-200/80 dark:border-zinc-800/80 space-y-2">
-              <div
-                key={trashFolder.id}
-                className={`group/folder flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                  activeFolderId === trashFolder.id
-                    ? "bg-zinc-200/80 dark:bg-zinc-800/80 text-zinc-900 dark:text-zinc-100 font-medium"
-                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-100"
-                }`}
-                onClick={() => onFolderSelect(trashFolder.id)}
-              >
-                <span className="truncate flex-1 flex items-center gap-2">
-                  <span className="text-base leading-none">🗑️</span>
-                  <span>{trashFolder.name}</span>
-                </span>
-                <span className="text-xs opacity-60">
-                  {countInFolder(trashFolder.id, notes, folders, trashId)}
-                </span>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         )}
 
@@ -229,7 +266,20 @@ export default function Sidebar({
           </a>
         </div>
 
-        {user ? (
+        {isLoading ? (
+          wasLoggedIn ? (
+            wasPro ? (
+              <div className="h-[52px] bg-black/5 dark:bg-white/5 border border-zinc-200/40 dark:border-zinc-800/40 rounded-xl animate-pulse w-full" />
+            ) : (
+              <div className="space-y-2">
+                <div className="h-[52px] bg-black/5 dark:bg-white/5 border border-zinc-200/40 dark:border-zinc-800/40 rounded-xl animate-pulse w-full" />
+                <div className="h-8 bg-black/5 dark:bg-white/5 rounded-xl animate-pulse w-full" />
+              </div>
+            )
+          ) : (
+            <div className="h-[38px] bg-black/5 dark:bg-white/5 border border-zinc-200/40 dark:border-zinc-800/40 rounded-xl animate-pulse w-full" />
+          )
+        ) : user ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2 bg-zinc-200/30 dark:bg-zinc-900/30 p-2.5 rounded-xl border border-zinc-200/40 dark:border-zinc-800/40">
               <div className="flex items-center gap-2 min-w-0">
