@@ -290,6 +290,28 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   ? "Create Account"
                   : "Send Reset Link"}
               </Button>
+              {mode === "signup" && (
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 text-center leading-relaxed mt-2 px-2">
+                  By creating an account, you agree to our{" "}
+                  <a
+                    href="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  >
+                    Terms of Service
+                  </a>{" "}
+                  and{" "}
+                  <a
+                    href="/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  >
+                    Privacy Policy
+                  </a>.
+                </p>
+              )}
             </form>
 
             {/* Divider */}

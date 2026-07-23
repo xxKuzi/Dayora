@@ -12,12 +12,14 @@ interface MenuButtonProps {
   items: MenuItem[];
   className?: string;
   title?: string;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
 export default function MenuButton({
   items,
   className = "",
   title,
+  onOpenChange,
 }: MenuButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -27,6 +29,7 @@ export default function MenuButton({
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        onOpenChange?.(false);
       }
     }
 
@@ -35,12 +38,13 @@ export default function MenuButton({
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [isOpen]);
+  }, [isOpen, onOpenChange]);
 
   const handleItemClick = (item: MenuItem) => {
     if (!item.disabled) {
       item.onClick();
       setIsOpen(false);
+      onOpenChange?.(false);
     }
   };
 
@@ -50,9 +54,17 @@ export default function MenuButton({
       ref={menuRef}
     >
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          const nextOpen = !isOpen;
+          setIsOpen(nextOpen);
+          onOpenChange?.(nextOpen);
+        }}
         title={title}
-        className="p-1 rounded text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60 transition-all"
+        className={`p-1 rounded transition-all ${
+          isOpen
+            ? "text-zinc-800 dark:text-zinc-200 bg-zinc-200/60 dark:bg-zinc-700/60"
+            : "text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60"
+        }`}
       >
         <div className="flex flex-col gap-[2px] items-center justify-center">
           <div className="w-[2.5px] h-[2.5px] bg-current rounded-full"></div>
