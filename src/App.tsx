@@ -1412,6 +1412,7 @@ const isDark = document.documentElement.classList.toggle('dark');
               anonAiCount={anonAiCount}
               onUpgradeClick={() => setIsUpgradeModalOpen(true)}
               isLoading={loadingAuth || (user ? !isSynced : false)}
+              onNavigateToSettings={() => setActiveView("settings")}
             />
           )}
 

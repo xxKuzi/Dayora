@@ -21,6 +21,7 @@ interface DailyPlanProps {
   anonAiCount?: number;
   onUpgradeClick?: () => void;
   isLoading?: boolean;
+  onNavigateToSettings?: () => void;
 }
 
 const formatTime = (timeStr: string | undefined): string => {
@@ -157,7 +158,22 @@ export default function DailyPlan({
   anonAiCount = 0,
   onUpgradeClick,
   isLoading = false,
+  onNavigateToSettings,
 }: DailyPlanProps) {
+  const [showSettingsTip, setShowSettingsTip] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("dayora_hide_settings_tip") !== "true";
+    }
+    return true;
+  });
+
+  const handleDismissTip = () => {
+    setShowSettingsTip(false);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dayora_hide_settings_tip", "true");
+    }
+  };
+
   const [rawTasks, setRawTasks] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("dayora_pending_prompt") || "";
@@ -951,6 +967,38 @@ export default function DailyPlan({
             )}
           </div>
         </div>
+
+        {/* Settings Tip Banner */}
+        {showSettingsTip && (
+          <div className="mb-6 p-4 rounded-2xl bg-white/70 dark:bg-zinc-900/60 border border-black/10 dark:border-white/5 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print shadow-[0_4px_20px_rgba(0,0,0,0.02)] animate-fade-in">
+            <div className="flex items-center gap-3">
+              <span className="text-xl shrink-0">💡</span>
+              <div>
+                <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                  Adjust planner preferences
+                </h4>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  Tailor the planner and AI generation to your schedule, work hours, habits, and goals.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={onNavigateToSettings}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white transition-all cursor-pointer shadow-sm flex items-center gap-1 active:scale-95"
+              >
+                Go to Settings ⚙️
+              </button>
+              <button
+                onClick={handleDismissTip}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer flex items-center justify-center w-6 h-6 font-bold"
+                title="Dismiss tip"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* AI or MANUAL Generation */}
         <div className="mb-8 no-print">
