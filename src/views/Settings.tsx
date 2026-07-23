@@ -220,26 +220,39 @@ export default function Settings({
       ? `${goalCount} Goal${goalCount > 1 ? "s" : ""}`
       : "Define your targets";
 
-  const habitsNames = habitsList.slice(0, 3).map((h) => h.name).join(", ");
-  const habitsSummaryText = habitCount > 3
-    ? `${habitsNames} (+${habitCount - 3} more)`
-    : habitsNames || "No routines configured yet";
+  const habitsNames = habitsList
+    .slice(0, 3)
+    .map((h) => h.name)
+    .join(", ");
+  const habitsSummaryText =
+    habitCount > 3
+      ? `${habitsNames} (+${habitCount - 3} more)`
+      : habitsNames || "No routines configured yet";
 
-  const goalsProgressList = goalsList.slice(0, 2).map((g) => `${g.title} (${g.progress}%)`).join(", ");
-  const goalsSummaryText = goalCount > 2
-    ? `${goalsProgressList} (+${goalCount - 2} more)`
-    : goalsProgressList || "No goals defined yet";
+  const goalsProgressList = goalsList
+    .slice(0, 2)
+    .map((g) => `${g.title} (${g.progress}%)`)
+    .join(", ");
+  const goalsSummaryText =
+    goalCount > 2
+      ? `${goalsProgressList} (+${goalCount - 2} more)`
+      : goalsProgressList || "No goals defined yet";
 
-  const workHoursText = (settings?.userType === "student" || settings?.userType === "worker")
-    ? ` • ${settings?.userType === "student" ? "School" : "Work"}: ${settings?.workHours?.start || "N/A"} - ${settings?.workHours?.end || "N/A"}`
-    : "";
+  const workHoursText =
+    settings?.userType === "student" || settings?.userType === "worker"
+      ? ` • ${settings?.userType === "student" ? "School" : "Work"}: ${settings?.workHours?.start || "N/A"} - ${settings?.workHours?.end || "N/A"}`
+      : "";
   const scheduleDetailsText = `Breakfast: ${settings?.mealTimes?.breakfast || "N/A"} • Lunch: ${settings?.mealTimes?.lunch || "N/A"} • Dinner: ${settings?.mealTimes?.dinner || "N/A"}${workHoursText}`;
 
   return (
     <div className="p-6 bg-gray-900 text-white min-h-screen shrink-0">
       <div className="max-w-4xl mx-auto">
-        <div className={`mb-8 pt-8 ${!isEditing ? "text-center flex flex-col items-center" : ""}`}>
-          <div className={`flex items-center gap-3 mb-2 ${!isEditing ? "justify-center" : "justify-start"}`}>
+        <div
+          className={`mb-8 pt-8 ${!isEditing ? "text-center flex flex-col items-center" : ""}`}
+        >
+          <div
+            className={`flex items-center gap-3 mb-2 ${!isEditing ? "justify-center" : "justify-start"}`}
+          >
             {onMenuClick && (
               <button
                 onClick={onMenuClick}
@@ -254,7 +267,11 @@ export default function Settings({
                   stroke="currentColor"
                   className="w-6 h-6 text-zinc-300"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                  />
                 </svg>
               </button>
             )}
@@ -322,7 +339,7 @@ export default function Settings({
                   </span>
                 )}
               </div>
-              <p className="text-sm text-zinc-400 max-w-xl leading-relaxed">
+              <p className="text-sm text-white max-w-xl leading-relaxed">
                 {isPro
                   ? "You have full access to up to 20 daily AI assistant runs and 10 email exports. Cancel or update your payment details anytime."
                   : "Unlock up to 20 daily AI schedules, priority response times, and 10 plan exports via email."}
@@ -333,7 +350,8 @@ export default function Settings({
                 <Button
                   onClick={handleManageBilling}
                   disabled={portalLoading}
-                  className="w-full md:w-auto px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md border border-zinc-700/50 hover:border-zinc-600"
+                  variant="custom"
+                  className="w-full md:w-auto text-white px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md border border-zinc-700/50 hover:border-zinc-600"
                 >
                   {portalLoading ? (
                     <>
@@ -349,6 +367,7 @@ export default function Settings({
               ) : (
                 <Button
                   onClick={onUpgradeClick}
+                  variant="custom"
                   className="w-full md:w-auto px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl text-xs font-bold tracking-wide transition-all shadow-lg hover:shadow-purple-500/25 cursor-pointer"
                 >
                   ✨ Upgrade to Pro
@@ -367,8 +386,12 @@ export default function Settings({
           <div className="max-w-4xl mx-auto">
             <div className="bg-zinc-950/20 backdrop-blur-xl border border-zinc-800/80 rounded-[2rem] p-10 md:p-12 space-y-12 shadow-2xl">
               <div className="space-y-2 pb-2">
-                <span className="text-xs tracking-[0.2em] uppercase font-bold text-purple-400">overview</span>
-                <h2 className="text-3xl font-semibold tracking-tight text-white">Your Setup at a Glance</h2>
+                <span className="text-xs tracking-[0.2em] uppercase font-bold text-purple-400">
+                  overview
+                </span>
+                <h2 className="text-3xl font-semibold tracking-tight text-white">
+                  Your Setup at a Glance
+                </h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
@@ -429,7 +452,11 @@ export default function Settings({
                   </div>
                   <div className="text-sm text-zinc-300 leading-relaxed font-normal">
                     {habitsSummaryText}
-                    {habitCount > 0 && <span className="block mt-1.5 text-xs text-zinc-500">Max streak: {maxStreak} days</span>}
+                    {habitCount > 0 && (
+                      <span className="block mt-1.5 text-xs text-zinc-500">
+                        Max streak: {maxStreak} days
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -450,7 +477,12 @@ export default function Settings({
                   </div>
                   <div className="text-sm text-zinc-300 leading-relaxed font-normal">
                     {goalsSummaryText}
-                    {goalCount > 0 && <span className="block mt-1.5 text-xs text-zinc-500">{completedGoals} of {goalCount} completed • Avg: {avgProgress}%</span>}
+                    {goalCount > 0 && (
+                      <span className="block mt-1.5 text-xs text-zinc-500">
+                        {completedGoals} of {goalCount} completed • Avg:{" "}
+                        {avgProgress}%
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
