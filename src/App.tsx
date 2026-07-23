@@ -89,7 +89,18 @@ export default function App() {
       {
         id: nid(),
         title: "Welcome",
-        body: "This is your first note.\nType away!",
+        body: `# 👋 Welcome to Dayora!
+
+Your new, supercharged workspace for daily planning and notes.
+
+---
+
+### 🌟 Key Features
+- **Daily Planner**: Connect your daily tasks and schedule seamlessly.
+- **Notes with Live Preview**: Write using clean *Markdown* formatting.
+- **Custom Folders**: Keep your ideas, logs, and drafts organized.
+
+Feel free to edit this note, delete it, or start a new one to begin planning.`,
         pinned: true,
         updatedAt: Date.now(),
         folderId: "f-default",
@@ -97,7 +108,34 @@ export default function App() {
       {
         id: nid(),
         title: "Todo",
-        body: "- Try dark mode (top right)\n- Press Ctrl/Cmd+N for new note\n- Search notes in the middle pane\n- Delete moves to Trash",
+        body: `# 🗒️ Daily Planner & Tasks
+
+Use this list to plan your day, log quick reference code, and manage notes.
+
+---
+
+## ⚡ Quick Start Tasks
+- [x] Toggle **Dark Mode** (top-right corner icon)
+- [ ] Create a new note using \`Cmd+N\` (Mac) or \`Ctrl+N\` (Windows)
+- [ ] Filter notes by title using the search bar in the middle pane
+- [ ] Drag notes between folders or delete to move them to **Trash**
+
+---
+
+## 💡 Productivity Tips
+
+> "Focus on being productive instead of busy." — *Tim Ferriss*
+
+### ⚙️ Useful Shortcuts
+1. Press \`Tab\` to navigate between text inputs and controls
+2. Learn more markdown tricks at the [Markdown Guide](https://www.markdownguide.org)
+3. Use inline code like \`dayora_dark_mode\` in localStorage to persist preferences
+
+### 🖥️ Code Snippet Reference
+\`\`\`javascript
+// Toggle theme programmatically
+const isDark = document.documentElement.classList.toggle('dark');
+\`\`\``,
         pinned: false,
         updatedAt: Date.now() - 10000,
         folderId: "f-default",
@@ -607,7 +645,18 @@ export default function App() {
             {
               id: nid(),
               title: "Welcome",
-              body: "This is your first note.\nType away!",
+              body: `# 👋 Welcome to Dayora!
+
+Your new, supercharged workspace for daily planning and notes.
+
+---
+
+### 🌟 Key Features
+- **Daily Planner**: Connect your daily tasks and schedule seamlessly.
+- **Notes with Live Preview**: Write using clean *Markdown* formatting.
+- **Custom Folders**: Keep your ideas, logs, and drafts organized.
+
+Feel free to edit this note, delete it, or start a new one to begin planning.`,
               pinned: true,
               updatedAt: Date.now(),
               folderId: "f-default",
@@ -615,7 +664,34 @@ export default function App() {
             {
               id: nid(),
               title: "Todo",
-              body: "- Try dark mode (top right)\n- Press Ctrl/Cmd+N for new note\n- Search notes in the middle pane\n- Delete moves to Trash",
+              body: `# 🗒️ Daily Planner & Tasks
+
+Use this list to plan your day, log quick reference code, and manage notes.
+
+---
+
+## ⚡ Quick Start Tasks
+- [x] Toggle **Dark Mode** (top-right corner icon)
+- [ ] Create a new note using \`Cmd+N\` (Mac) or \`Ctrl+N\` (Windows)
+- [ ] Filter notes by title using the search bar in the middle pane
+- [ ] Drag notes between folders or delete to move them to **Trash**
+
+---
+
+## 💡 Productivity Tips
+
+> "Focus on being productive instead of busy." — *Tim Ferriss*
+
+### ⚙️ Useful Shortcuts
+1. Press \`Tab\` to navigate between text inputs and controls
+2. Learn more markdown tricks at the [Markdown Guide](https://www.markdownguide.org)
+3. Use inline code like \`dayora_dark_mode\` in localStorage to persist preferences
+
+### 🖥️ Code Snippet Reference
+\`\`\`javascript
+// Toggle theme programmatically
+const isDark = document.documentElement.classList.toggle('dark');
+\`\`\``,
               pinned: false,
               updatedAt: Date.now() - 10000,
               folderId: "f-default",
@@ -962,17 +1038,25 @@ export default function App() {
     if (!note) return;
     if (note.trashed) {
       // permanent delete
+      if (activeNoteId === note.id) {
+        const index = visibleNotes.findIndex((n) => n.id === note.id);
+        const nextNote = visibleNotes[index + 1] || visibleNotes[index - 1] || null;
+        setActiveNoteId(nextNote ? nextNote.id : null);
+      }
       setNotesWithTransition((ns) => ns.filter((n) => n.id !== note.id));
-      setActiveNoteId(null);
       return;
     }
     // move to trash
+    if (activeNoteId === note.id) {
+      const index = visibleNotes.findIndex((n) => n.id === note.id);
+      const nextNote = visibleNotes[index + 1] || visibleNotes[index - 1] || null;
+      setActiveNoteId(nextNote ? nextNote.id : null);
+    }
     setNotesWithTransition((ns) =>
       ns.map((n) =>
         n.id === note.id ? { ...n, trashed: true, updatedAt: Date.now() } : n,
       ),
     );
-    if (activeFolderId !== trashId) setActiveFolderId(trashId);
   }
 
   function handleRestoreNote(note: Note | null) {

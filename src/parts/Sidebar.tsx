@@ -266,6 +266,26 @@ export default function Sidebar({
           </a>
         </div>
 
+        <div className="flex justify-between px-1.5 pt-1 text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">
+          <a
+            href="/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+          >
+            Terms of Service
+          </a>
+          <span>•</span>
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+          >
+            Privacy Policy
+          </a>
+        </div>
+
         {isLoading ? (
           wasLoggedIn ? (
             wasPro ? (

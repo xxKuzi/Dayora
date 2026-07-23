@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Note, DarkMode, Folder } from "../types";
 import { timeAgo, preview } from "../utils";
 import { Button, Input, MenuButton } from "../components";
@@ -29,6 +30,7 @@ export default function NotesList({
   onRestoreNote,
   onMoveNote,
 }: NotesListProps) {
+  const [openMenuNoteId, setOpenMenuNoteId] = useState<string | null>(null);
   const getNoteMenuItems = (note: Note) => {
     if (note.trashed) {
       return [
@@ -93,6 +95,8 @@ export default function NotesList({
               style={{
                 viewTransitionName: `note-${n.id}`,
                 viewTransitionClass: "note-item",
+                position: openMenuNoteId === n.id ? "relative" : undefined,
+                zIndex: openMenuNoteId === n.id ? 50 : undefined,
               } as React.CSSProperties}
             >
               <div
@@ -139,6 +143,9 @@ export default function NotesList({
                         items={getNoteMenuItems(n)}
                         title="Note actions"
                         className="mx-0"
+                        onOpenChange={(isOpen) => {
+                          setOpenMenuNoteId(isOpen ? n.id : null);
+                        }}
                       />
                     </div>
                   </div>
