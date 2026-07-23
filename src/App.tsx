@@ -1071,9 +1071,7 @@ export default function App() {
         token,
       );
 
-      if ((generatedPlan as any).debugInfo) {
-        console.warn("AI Plan Debug Info:", (generatedPlan as any).debugInfo);
-      }
+
 
       const existingPlan = dailyPlans.find((plan) => plan.date === date);
 

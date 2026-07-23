@@ -455,9 +455,7 @@ export default function DailyPlan({
       });
 
       const data = await response.json().catch(() => ({}));
-      if (data.debugInfo) {
-        console.warn("Email Route Debug Info:", data.debugInfo);
-      }
+
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to send email");
