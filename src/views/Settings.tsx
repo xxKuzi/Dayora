@@ -1,19 +1,63 @@
 import { useState } from "react";
+import type { User } from "firebase/auth";
 import type { UserSettings, Habit, Goal } from "../types";
 import { Button, Input, Textarea } from "../components";
 
 interface SettingsProps {
   settings: UserSettings;
   onUpdateSettings: (settings: UserSettings) => void;
+  user: User | null;
+  isPro: boolean;
+  onUpgradeClick: () => void;
+  onSignOutClick: () => void;
 }
 
 export default function Settings({
   settings,
   onUpdateSettings,
+  user,
+  isPro,
+  onUpgradeClick,
+  onSignOutClick,
 }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<
     "profile" | "schedule" | "habits" | "goals"
   >("profile");
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
+
+  const handleManageBilling = async () => {
+    if (!user) return;
+    setPortalLoading(true);
+    setPortalError(null);
+
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load billing portal.");
+      }
+
+      if (data.url) {
+        window.location.assign(data.url);
+      } else {
+        throw new Error("No billing portal URL returned from server.");
+      }
+    } catch (err: any) {
+      console.error("Billing portal error:", err);
+      setPortalError(err.message || "Failed to redirect to billing portal.");
+    } finally {
+      setPortalLoading(false);
+    }
+  };
   const [isEditing, setIsEditing] = useState(false);
   const [newHabit, setNewHabit] = useState({
     name: "",
@@ -198,6 +242,104 @@ export default function Settings({
             Customize your daily schedule, habits, and goals
           </p>
         </div>
+
+        {/* User Account / Profile Section */}
+        {user && !isEditing && (
+          <div className="mb-6 p-4 bg-zinc-950/20 backdrop-blur-xl border border-zinc-800/80 rounded-2xl flex items-center justify-between gap-4 max-w-4xl mx-auto animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="flex items-center gap-3 min-w-0">
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="Avatar"
+                  className="w-10 h-10 rounded-full border border-zinc-700/50 flex-shrink-0"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-base flex-shrink-0">
+                  {(user.displayName || user.email || "?")
+                    .charAt(0)
+                    .toUpperCase()}
+                </div>
+              )}
+              <div className="flex flex-col min-w-0 text-left">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold truncate text-white">
+                    {user.displayName || "Online User"}
+                  </span>
+                  {isPro && (
+                    <span className="px-1.5 py-0.5 text-[8px] font-black bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded uppercase tracking-wider">
+                      Pro
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs text-zinc-400 truncate">
+                  {user.email}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={onSignOutClick}
+              className="px-4 py-2 hover:bg-red-500/10 active:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 rounded-xl text-xs font-semibold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>🚪</span>
+              <span>Sign Out</span>
+            </button>
+          </div>
+        )}
+
+        {/* Subscription Card */}
+        {user && !isEditing && (
+          <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-purple-950/20 via-indigo-950/20 to-zinc-950/30 border border-purple-500/20 hover:border-purple-500/30 transition-all duration-300 max-w-4xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="space-y-1.5 text-left">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold text-white">
+                  {isPro ? "Dayora Pro ✨" : "Dayora Free Plan"}
+                </span>
+                {isPro && (
+                  <span className="px-2 py-0.5 text-[9px] font-black bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-md uppercase tracking-wider">
+                    Active
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-zinc-400 max-w-xl leading-relaxed">
+                {isPro
+                  ? "You have full access to up to 20 daily AI assistant runs and 10 email exports. Cancel or update your payment details anytime."
+                  : "Unlock up to 20 daily AI schedules, priority response times, and 10 plan exports via email."}
+              </p>
+            </div>
+            <div className="flex-shrink-0 w-full md:w-auto">
+              {isPro ? (
+                <Button
+                  onClick={handleManageBilling}
+                  disabled={portalLoading}
+                  className="w-full md:w-auto px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md border border-zinc-700/50 hover:border-zinc-600"
+                >
+                  {portalLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                      <span>Opening Billing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>💳 Manage Subscription</span>
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={onUpgradeClick}
+                  className="w-full md:w-auto px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl text-xs font-bold tracking-wide transition-all shadow-lg hover:shadow-purple-500/25 cursor-pointer"
+                >
+                  ✨ Upgrade to Pro
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+        {user && !isEditing && portalError && (
+          <div className="mb-8 max-w-4xl mx-auto p-4 bg-red-950/20 border border-red-500/30 rounded-xl">
+            <p className="text-xs text-red-400">{portalError}</p>
+          </div>
+        )}
 
         {!isEditing ? (
           <div className="max-w-4xl mx-auto">

@@ -1335,6 +1335,10 @@ export default function App() {
             <Settings
               settings={settings}
               onUpdateSettings={handleUpdateSettings}
+              user={user}
+              isPro={isPro}
+              onUpgradeClick={() => setIsUpgradeModalOpen(true)}
+              onSignOutClick={handleSignOut}
             />
           )}
         </div>
