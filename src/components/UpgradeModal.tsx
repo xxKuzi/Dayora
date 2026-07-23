@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import type { User } from "firebase/auth";
-import { doc, setDoc, collection, addDoc, onSnapshot } from "firebase/firestore";
-import { db } from "../services/firebase";
 import Button from "./Button";
 
 interface UpgradeModalProps {
@@ -32,42 +30,39 @@ export default function UpgradeModal({
     }
   }, [isOpen]);
 
-  // Trigger Stripe Checkout doc creation when state changes to "checkout"
+  // Trigger Stripe Checkout API call when state changes to "checkout"
   useEffect(() => {
-    if (modalState === "checkout" && user && db) {
+    if (modalState === "checkout" && user) {
       setLoading(true);
       setError(null);
 
-      const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID || "price_dummy";
-      const sessionsRef = collection(db, "users", user.uid, "checkout_sessions");
-      
-      let unsub: (() => void) | null = null;
-
-      addDoc(sessionsRef, {
-        price: priceId,
-        success_url: window.location.origin,
-        cancel_url: window.location.origin,
-      })
-        .then((docRef) => {
-          unsub = onSnapshot(docRef, (snap) => {
-            const data = snap.data();
-            if (data?.url) {
-              window.location.assign(data.url);
-            } else if (data?.error) {
-              setError(data.error.message || "Failed to create checkout session.");
-              setLoading(false);
-            }
+      user
+        .getIdToken()
+        .then((token) => {
+          return fetch("/api/checkout", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
           });
         })
+        .then(async (res) => {
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || "Failed to create checkout session.");
+          }
+          if (data.url) {
+            window.location.assign(data.url);
+          } else {
+            throw new Error("No checkout URL returned from Stripe.");
+          }
+        })
         .catch((err: any) => {
-          console.error("Error creating checkout session:", err);
+          console.error("Stripe checkout initiation failed:", err);
           setError(err.message || "Failed to initiate Stripe Checkout.");
           setLoading(false);
         });
-
-      return () => {
-        if (unsub) unsub();
-      };
     }
   }, [modalState, user]);
 
@@ -124,7 +119,8 @@ export default function UpgradeModal({
                 Supercharge Your Productivity
               </h3>
               <p className="text-sm text-zinc-400">
-                Unlock up to 20 daily AI assistant plan generations and 10 email exports.
+                Unlock up to 20 daily AI assistant plan generations and 10 email
+                exports.
               </p>
             </div>
 
@@ -139,13 +135,14 @@ export default function UpgradeModal({
                     <span className="text-red-500 flex-shrink-0">✕</span>
                     <span>1 AI prompt daily (Unsigned)</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-red-500 flex-shrink-0">✕</span>
-                    <span>3 AI prompts daily (Signed In)</span>
-                  </div>
+
                   <div className="flex items-center gap-2">
                     <span className="text-red-500 flex-shrink-0">✕</span>
                     <span>1 daily plan email export</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-red-500 flex-shrink-0">✕</span>
+                    <span>Slower responses during peak hours</span>
                   </div>
                 </div>
               </div>
@@ -176,10 +173,16 @@ export default function UpgradeModal({
             {/* Pricing Section */}
             <div className="flex flex-col items-center justify-center p-4 bg-zinc-950/60 rounded-2xl border border-zinc-800/80 text-center space-y-1">
               <div className="flex items-baseline gap-1.5 justify-center">
-                <span className="text-3xl font-extrabold text-white">$2.99</span>
-                <span className="text-sm text-zinc-400 font-medium">/ month</span>
+                <span className="text-3xl font-extrabold text-white">
+                  $1.99
+                </span>
+                <span className="text-sm text-zinc-400 font-medium">
+                  / month
+                </span>
               </div>
-              <p className="text-xs text-zinc-500">Cancel or update subscription settings anytime.</p>
+              <p className="text-xs text-zinc-500">
+                Cancel or update subscription settings anytime.
+              </p>
             </div>
 
             {/* CTA action buttons */}
@@ -200,7 +203,8 @@ export default function UpgradeModal({
                     Sign In to Upgrade
                   </Button>
                   <p className="text-center text-xs text-zinc-500 leading-normal">
-                    You must be logged in to sync your subscription across devices.
+                    You must be logged in to sync your subscription across
+                    devices.
                   </p>
                 </div>
               )}
@@ -215,7 +219,9 @@ export default function UpgradeModal({
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/10 text-red-500 border border-red-500/30 text-3xl mb-4">
                   ⚠️
                 </div>
-                <h3 className="text-xl font-bold text-white">Stripe Redirection Failed</h3>
+                <h3 className="text-xl font-bold text-white">
+                  Stripe Redirection Failed
+                </h3>
                 <p className="text-sm text-zinc-400 max-w-sm leading-relaxed mt-2">
                   {error}
                 </p>
@@ -242,9 +248,12 @@ export default function UpgradeModal({
             ) : (
               <>
                 <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin mb-6"></div>
-                <h3 className="text-xl font-bold text-white">Redirecting to Stripe Checkout</h3>
+                <h3 className="text-xl font-bold text-white">
+                  Redirecting to Stripe Checkout
+                </h3>
                 <p className="text-sm text-zinc-400 max-w-sm leading-relaxed mt-2">
-                  We are opening your secure billing session. Please complete payment on the checkout page to upgrade your account.
+                  We are opening your secure billing session. Please complete
+                  payment on the checkout page to upgrade your account.
                 </p>
                 <div className="pt-6 w-full max-w-xs">
                   <Button
@@ -266,24 +275,35 @@ export default function UpgradeModal({
               🎉
             </div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-extrabold text-white">Upgrade Successful!</h3>
+              <h3 className="text-2xl font-extrabold text-white">
+                Upgrade Successful!
+              </h3>
               <p className="text-zinc-400 text-sm max-w-sm mx-auto leading-relaxed">
-                Thank you for upgrading to <strong className="text-purple-400">Dayora Pro</strong>! All limit restrictions are now successfully removed from your account.
+                Thank you for upgrading to{" "}
+                <strong className="text-purple-400">Dayora Pro</strong>! All
+                limit restrictions are now successfully removed from your
+                account.
               </p>
             </div>
 
             <div className="p-4 bg-zinc-950/60 rounded-2xl border border-zinc-800 text-left text-xs max-w-sm mx-auto space-y-2">
               <div className="flex justify-between">
                 <span className="text-zinc-500">Plan:</span>
-                <span className="text-purple-400 font-semibold">Pro Subscription</span>
+                <span className="text-purple-400 font-semibold">
+                  Pro Subscription
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-500">AI Prompt limit:</span>
-                <span className="text-purple-400 font-semibold">20 daily prompts</span>
+                <span className="text-purple-400 font-semibold">
+                  20 daily prompts
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-500">Email Export limit:</span>
-                <span className="text-purple-400 font-semibold">10 daily emails</span>
+                <span className="text-purple-400 font-semibold">
+                  10 daily emails
+                </span>
               </div>
             </div>
 

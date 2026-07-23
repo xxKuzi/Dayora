@@ -919,7 +919,13 @@ export default function DailyPlan({
                   <span>⬇️</span> Export MD
                 </button>
                 <button
-                  onClick={() => setIsEmailModalOpen(true)}
+                  onClick={() => {
+                    if (!isPro && (dailyUsage?.emailCount ?? 0) >= 1) {
+                      onUpgradeClick?.();
+                    } else {
+                      setIsEmailModalOpen(true);
+                    }
+                  }}
                   className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 bg-purple-600 hover:bg-purple-700 text-white border border-transparent shadow-md shadow-purple-900/20 active:scale-95 flex items-center gap-2 cursor-pointer"
                 >
                   <span>✉️</span> Email Plan
@@ -1860,6 +1866,7 @@ export default function DailyPlan({
         onClose={() => {
           setIsEmailModalOpen(false);
           setEmailStatus("idle");
+          setEmailErrorMsg("");
         }}
         title="✉️ Send Plan via Email"
         footer={
@@ -1875,9 +1882,13 @@ export default function DailyPlan({
             </button>
           ) : !user ||
             isEmailRestricted ||
-            (!isPro && (dailyUsage?.emailCount ?? 0) >= 10) ? (
+            (!isPro && ((dailyUsage?.emailCount ?? 0) >= 1 || emailErrorMsg === "EMAIL_LIMIT_EXCEEDED")) ? (
             <button
-              onClick={() => setIsEmailModalOpen(false)}
+              onClick={() => {
+                setIsEmailModalOpen(false);
+                setEmailStatus("idle");
+                setEmailErrorMsg("");
+              }}
               className="px-4 py-2 bg-black/5 dark:bg-zinc-800 hover:bg-black/10 dark:hover:bg-zinc-700 text-zinc-700 dark:text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer"
             >
               Close
@@ -1981,7 +1992,7 @@ export default function DailyPlan({
               )}
             </div>
           </div>
-        ) : !isPro && (dailyUsage?.emailCount ?? 0) >= 10 ? (
+        ) : !isPro && ((dailyUsage?.emailCount ?? 0) >= 1 || emailErrorMsg === "EMAIL_LIMIT_EXCEEDED") ? (
           <div className="space-y-4">
             <div className="p-4 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40 rounded-xl text-center">
               <span className="text-3xl mb-2 block">⭐</span>
@@ -1989,8 +2000,8 @@ export default function DailyPlan({
                 Daily Email Limit Reached
               </h4>
               <p className="text-zinc-600 dark:text-gray-300 text-sm leading-relaxed">
-                Free accounts can send <strong>10 daily plan emails</strong>.
-                Upgrade to Pro to remove all daily limits!
+                Free accounts can send <strong>1 daily plan email</strong>.
+                Upgrade to Pro for 10 emails/day!
               </p>
             </div>
             {onUpgradeClick && (

@@ -138,11 +138,11 @@ export async function POST(request: Request) {
         const usageData = usageDoc.data() || { emailCount: 0 };
         const emailCount = usageData.emailCount || 0;
 
-        if (emailCount >= 10) {
+        if (emailCount >= 1) {
           return sendResponse(
             {
               error: "EMAIL_LIMIT_EXCEEDED",
-              message: "You have reached your daily limit of 10 emails. Upgrade to Pro for unlimited emails.",
+              message: "You have reached your daily limit. Upgrade to Pro for 10 emails/day.",
             },
             { status: 403 }
           );
