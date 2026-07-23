@@ -1329,7 +1329,7 @@ const isDark = document.documentElement.classList.toggle('dark');
           onClick={() => setMobileSidebarOpen(false)}
         />
         <div
-          className={`fixed left-0 top-0 h-screen bg-zinc-100 dark:bg-zinc-950 z-50 transition-transform duration-300 w-60 md:hidden border-r border-zinc-200/80 dark:border-zinc-800/80 ${
+          className={`fixed left-0 top-0 h-[100dvh] bg-zinc-100 dark:bg-zinc-950 z-50 transition-transform duration-300 w-60 md:hidden border-r border-zinc-200/80 dark:border-zinc-800/80 ${
             mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -1540,7 +1540,7 @@ const isDark = document.documentElement.classList.toggle('dark');
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className={`fixed bottom-0 left-0 right-0 h-16 bg-white/90 dark:bg-zinc-950/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800/80 flex items-center justify-around z-30 no-print md:hidden ${
+      <nav className={`fixed bottom-0 left-0 right-0 h-16 bg-white/90 dark:bg-zinc-950/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800/80 flex items-center justify-around z-30 no-print md:hidden mobile-navbar-transition ${
         activeView === "notes" && activeNoteId !== null ? "hidden" : "flex"
       }`}>
         {[

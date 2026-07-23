@@ -82,7 +82,7 @@ export default function Sidebar({
   ) ?? { id: trashId || "f-trash", name: "Trash" };
 
   return (
-    <aside className="w-60 h-full border-r border-zinc-200/80 dark:border-zinc-800/80 p-4 flex flex-col bg-zinc-100/90 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+    <aside className="w-60 h-full border-r border-zinc-200/80 dark:border-zinc-800/80 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))] flex flex-col bg-zinc-100/90 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
       {/* Top: Navigation */}
       <div className="space-y-1 mb-4">
         {[

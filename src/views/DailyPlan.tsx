@@ -846,35 +846,37 @@ export default function DailyPlan({
         {/* Header Section */}
         <div className="mb-8 pt-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <div>
-              <div className="flex items-center gap-3">
-                {onMenuClick && (
-                  <button
-                    onClick={onMenuClick}
-                    className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl cursor-pointer shrink-0 md:hidden"
-                    title="Open folders menu"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2}
-                      stroke="currentColor"
-                      className="w-6 h-6 text-zinc-700 dark:text-zinc-300"
+            <div className="flex flex-col items-center sm:items-start w-full">
+              <div className="flex flex-col items-center sm:flex-row sm:items-center gap-3">
+                <div className="flex items-center justify-center gap-3">
+                  {onMenuClick && (
+                    <button
+                      onClick={onMenuClick}
+                      className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl cursor-pointer shrink-0 md:hidden"
+                      title="Open folders menu"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                      />
-                    </svg>
-                  </button>
-                )}
-                <h1 className="text-4xl font-bold text-zinc-900 dark:text-white">
-                  Daily Plan
-                </h1>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                        stroke="currentColor"
+                        className="w-6 h-6 text-zinc-700 dark:text-zinc-300"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                  <h1 className="text-4xl sm:text-4xl sm:mb-0 mb-[2px] font-bold text-zinc-900 dark:text-white whitespace-nowrap">
+                    Daily Plan
+                  </h1>
+                </div>
                 {/* Date switcher controls */}
-                <div className="flex items-center gap-1.5 ml-2 no-print bg-white/50 dark:bg-black/30 border border-black/10 dark:border-white/5 rounded-xl p-1 backdrop-blur-sm shadow-sm">
+                <div className="flex items-center gap-1.5 sm:ml-2 no-print bg-white/50 dark:bg-black/30 border border-black/10 dark:border-white/5 rounded-xl p-1 backdrop-blur-sm shadow-sm">
                   <button
                     onClick={handlePrevDay}
                     className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer text-sm font-semibold flex items-center justify-center w-8 h-8"
@@ -896,8 +898,9 @@ export default function DailyPlan({
                       onChange={(e) => onDateChange(e.target.value)}
                       className="opacity-0 absolute inset-0 cursor-pointer w-full h-full z-10"
                     />
-                    <button className="px-2 py-1.5 text-xs font-semibold bg-black/5 dark:bg-white/5 rounded-md hover:bg-black/10 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 pointer-events-none flex items-center justify-center w-8 h-8">
-                      📅
+                    <button className="px-2 py-1.5 text-xs font-semibold bg-black/5 dark:bg-white/5 rounded-md hover:bg-black/10 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 pointer-events-none flex items-center justify-center gap-1.5 w-8 h-8 sm:w-auto sm:px-2.5">
+                      <span>📅</span>
+                      <span className="hidden sm:inline">Select a Date</span>
                     </button>
                   </div>
                   <button
@@ -909,7 +912,7 @@ export default function DailyPlan({
                   </button>
                 </div>
               </div>
-              <p className="text-gray-400 mt-1">
+              <p className="text-gray-400 mt-2 sm:mt-1 text-center sm:text-left">
                 {new Date(selectedDate + "T00:00:00").toLocaleDateString(
                   "en-US",
                   {
@@ -1132,7 +1135,7 @@ export default function DailyPlan({
 
                 <div className="space-y-3">
                   {/* Column Headers */}
-                  <div className="flex gap-3 items-center mb-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400 px-1">
+                  <div className="hidden sm:flex gap-3 items-center mb-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400 px-1">
                     <div className="flex-1">Task Name</div>
                     <div className="w-32">Importance</div>
                     <div className="w-48 text-center">Part of Day & Time</div>
@@ -1140,130 +1143,156 @@ export default function DailyPlan({
                   </div>
 
                   {tableTasks.map((task, index) => (
-                    <div key={index} className="flex gap-3 items-center">
-                      <Input
-                        value={task.text || ""}
-                        onChange={(e) =>
-                          handleTableTaskChange(index, "text", e.target.value)
-                        }
-                        placeholder="Task name..."
-                        className="flex-1 bg-white dark:bg-gray-800 border border-black/15 dark:border-gray-700 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-gray-500"
-                        disabled={isLoading}
-                      />
-                      <select
-                        value={task.priority || "medium"}
-                        onChange={(e) =>
-                          handleTableTaskChange(
-                            index,
-                            "priority",
-                            e.target.value,
-                          )
-                        }
-                        className="w-32 px-3 py-2 bg-white dark:bg-gray-800 border border-black/15 dark:border-gray-700 rounded text-zinc-900 dark:text-white"
-                        disabled={isLoading}
-                      >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                      </select>
-                      <div className="w-48 flex gap-1 justify-center items-center">
-                        {[
-                          {
-                            key: "morning",
-                            label: "1",
-                            title:
-                              "Morning (6AM-12PM): Start your day, important tasks",
-                          },
-                          {
-                            key: "midday",
-                            label: "2",
-                            title: "Midday (12PM-6PM): Meetings, focused work",
-                          },
-                          {
-                            key: "evening",
-                            label: "3",
-                            title:
-                              "Evening (6PM-12AM): Wind down, personal tasks",
-                          },
-                        ].map((time) => (
-                          <button
-                            key={time.key}
-                            onClick={() =>
-                              handleTableTaskChange(
-                                index,
-                                "timeOfDay",
-                                time.key,
-                              )
-                            }
-                            title={time.title}
-                            disabled={isLoading}
-                            className={`px-3 py-1 rounded text-sm font-medium transition-colors border ${
-                              task.timeOfDay === time.key
-                                ? `${getTimeOfDayColor(time.key)} border-transparent`
-                                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 border-zinc-200/50 dark:border-zinc-700/50"
-                            } ${isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                          >
-                            {time.label}
-                          </button>
-                        ))}
-
-                        {/* Specific Time Picker / Add Time Button */}
-                        {task.time !== undefined ? (
-                          <div className="relative flex items-center bg-white dark:bg-gray-800 border border-black/15 dark:border-gray-700 rounded px-1.5 py-0.5 text-xs font-medium text-zinc-900 dark:text-white max-w-[100px]">
-                            <input
-                              type="time"
-                              value={task.time}
-                              onChange={(e) =>
-                                handleTableTaskChange(
-                                  index,
-                                  "time",
-                                  e.target.value,
-                                )
-                              }
-                              disabled={isLoading}
-                              className="bg-transparent border-none p-0 text-xs font-semibold focus:ring-0 focus:outline-none w-16 text-zinc-900 dark:text-white cursor-pointer"
-                            />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleTableTaskChange(index, "time", undefined)
-                              }
-                              disabled={isLoading}
-                              className="ml-1 text-zinc-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 cursor-pointer disabled:opacity-50"
-                              title="Clear specific time"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              let defaultTime = "09:00";
-                              if (task.timeOfDay === "midday")
-                                defaultTime = "13:00";
-                              else if (task.timeOfDay === "evening")
-                                defaultTime = "19:00";
-                              handleTableTaskChange(index, "time", defaultTime);
-                            }}
-                            disabled={isLoading}
-                            className="px-2 py-1 rounded text-xs font-medium bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:border-purple-500/35 transition-colors cursor-pointer disabled:opacity-50"
-                            title="Add specific start time"
-                          >
-                            + Time
-                          </button>
-                        )}
-                      </div>
-                      <div className="w-6 flex justify-center">
+                    <div
+                      key={index}
+                      className="flex flex-col sm:flex-row gap-2 sm:gap-3 p-3 sm:p-0 rounded-xl bg-black/5 dark:bg-white/5 sm:bg-transparent dark:sm:bg-transparent border border-black/10 dark:border-white/5 sm:border-none"
+                    >
+                      {/* Line 1: Input Box + Delete Button (on mobile) */}
+                      <div className="flex gap-2 items-center w-full sm:flex-1">
+                        <Input
+                          value={task.text || ""}
+                          onChange={(e) =>
+                            handleTableTaskChange(index, "text", e.target.value)
+                          }
+                          placeholder="Task name..."
+                          className="flex-1 bg-white dark:bg-gray-800 border border-black/15 dark:border-gray-700 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-gray-500"
+                          disabled={isLoading}
+                        />
                         {tableTasks.length > 1 && (
                           <button
                             tabIndex={-1}
                             onClick={() => handleRemoveTableTask(index)}
                             disabled={isLoading}
-                            className="text-red-400 hover:text-red-300 cursor-pointer disabled:opacity-50"
+                            className="sm:hidden text-red-400 hover:text-red-300 cursor-pointer disabled:opacity-50 p-1"
+                            title="Delete task"
                           >
                             🗑️
                           </button>
+                        )}
+                      </div>
+
+                      {/* Line 2: Importance & Part of Day / Time Picker */}
+                      <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-start">
+                        <select
+                          value={task.priority || "medium"}
+                          onChange={(e) =>
+                            handleTableTaskChange(
+                              index,
+                              "priority",
+                              e.target.value,
+                            )
+                          }
+                          className="w-28 shrink-0 sm:w-32 px-3 py-2 bg-white dark:bg-gray-800 border border-black/15 dark:border-gray-700 rounded text-zinc-900 dark:text-white text-sm"
+                          disabled={isLoading}
+                        >
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                        </select>
+
+                        <div className="flex-1 sm:w-48 flex gap-1 justify-end sm:justify-center items-center">
+                          {[
+                            {
+                              key: "morning",
+                              label: "1",
+                              title:
+                                "Morning (6AM-12PM): Start your day, important tasks",
+                            },
+                            {
+                              key: "midday",
+                              label: "2",
+                              title: "Midday (12PM-6PM): Meetings, focused work",
+                            },
+                            {
+                              key: "evening",
+                              label: "3",
+                              title:
+                                "Evening (6PM-12AM): Wind down, personal tasks",
+                            },
+                          ].map((time) => (
+                            <button
+                              key={time.key}
+                              type="button"
+                              onClick={() =>
+                                handleTableTaskChange(
+                                  index,
+                                  "timeOfDay",
+                                  time.key,
+                                )
+                              }
+                              title={time.title}
+                              disabled={isLoading}
+                              className={`px-3 py-1 rounded text-sm font-medium transition-colors border ${
+                                task.timeOfDay === time.key
+                                  ? `${getTimeOfDayColor(time.key)} border-transparent`
+                                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 border-zinc-200/50 dark:border-zinc-700/50"
+                              } ${isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                            >
+                              {time.label}
+                            </button>
+                          ))}
+
+                          {/* Specific Time Picker / Add Time Button */}
+                          {task.time !== undefined ? (
+                            <div className="relative flex items-center bg-white dark:bg-gray-800 border border-black/15 dark:border-gray-700 rounded px-1.5 py-0.5 text-xs font-medium text-zinc-900 dark:text-white max-w-[100px]">
+                              <input
+                                type="time"
+                                value={task.time}
+                                onChange={(e) =>
+                                  handleTableTaskChange(
+                                    index,
+                                    "time",
+                                    e.target.value,
+                                  )
+                                }
+                                disabled={isLoading}
+                                className="bg-transparent border-none p-0 text-xs font-semibold focus:ring-0 focus:outline-none w-16 text-zinc-900 dark:text-white cursor-pointer"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleTableTaskChange(index, "time", undefined)
+                                }
+                                disabled={isLoading}
+                                className="ml-1 text-zinc-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 cursor-pointer disabled:opacity-50"
+                                title="Clear specific time"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                let defaultTime = "09:00";
+                                if (task.timeOfDay === "midday")
+                                  defaultTime = "13:00";
+                                else if (task.timeOfDay === "evening")
+                                  defaultTime = "19:00";
+                                handleTableTaskChange(index, "time", defaultTime);
+                              }}
+                              disabled={isLoading}
+                              className="px-2.5 py-1 rounded text-xs font-medium bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 hover:border-purple-500/35 transition-colors cursor-pointer disabled:opacity-50"
+                              title="Add specific start time"
+                            >
+                              <span className="sm:hidden">+</span>
+                              <span className="hidden sm:inline">+ Time</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {tableTasks.length > 1 && (
+                          <div className="hidden sm:flex justify-center w-6 shrink-0">
+                            <button
+                              tabIndex={-1}
+                              onClick={() => handleRemoveTableTask(index)}
+                              disabled={isLoading}
+                              className="text-red-400 hover:text-red-300 cursor-pointer disabled:opacity-50"
+                              title="Delete task"
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>

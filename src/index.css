@@ -104,6 +104,14 @@ textarea:focus-visible {
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.mobile-navbar-transition {
+  view-transition-name: mobile-navbar;
+}
+
+::view-transition-group(mobile-navbar) {
+  z-index: 1000;
+}
+
 .no-transition,
 .no-transition * {
   transition: none !important;
