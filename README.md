@@ -67,7 +67,7 @@ to keep the app usable offline between syncs.
 git clone https://github.com/xxKuzi/Dayora.git
 cd Dayora
 npm install
-cp env.example .env.local   # add your Gemini key, see below
+cp .env.example .env.local   # add your Gemini key, see below
 npm run dev
 ```
 
@@ -77,8 +77,7 @@ You'll also need a Firebase project (Auth + Firestore) wired up in `src/`,
 plus Stripe and Resend keys if you want to touch the Pro-plan or email paths —
 neither is required just to run the note-taking and AI-planning core.
 
-**Required:** `VITE_GEMINI_API_KEY` (despite the name, this powers the
-Next.js API route — get one at [aistudio.google.com](https://aistudio.google.com/u/2/apikey)).
+**Required:** `GEMINI_API_KEY` (this powers the Next.js API route — get one at [aistudio.google.com](https://aistudio.google.com/u/2/apikey)).
 
 ## License
 
