@@ -3,11 +3,8 @@
 </p>
 
 <h1 align="center">Dayora</h1>
-<p align="center"><strong>Write down whatever's in your head. Get a day back.</strong></p>
+<p align="center"><strong>Write down whatever's in your head. Planning let on us.</strong></p>
 
-<p align="center">
-  <a href="https://dayora.cz">dayora.cz</a>
-</p>
 
 <p align="center">
   <img src="./Dayora-screenshot.png" alt="Dayora note-taking interface with folders, a note list, and a checklist editor" width="90%">
@@ -85,5 +82,6 @@ Next.js API route — get one at [aistudio.google.com](https://aistudio.google.c
 
 ## License
 
-No LICENSE file is committed to this repo yet. The previous README stated
-AGPL-3.0 — add a `LICENSE` file if that's still the intent.
+All rights reserved. This repository is shared for portfolio and viewing
+purposes only — no permission is granted to use, copy, modify, or distribute
+it. See [LICENSE](./LICENSE).
