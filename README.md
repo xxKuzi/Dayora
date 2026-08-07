@@ -10,25 +10,41 @@
   <img src="./Dayora-screenshot.png" alt="Dayora note-taking interface with folders, a note list, and a checklist editor" width="90%">
 </p>
 
+<br>
+
 ## What it is
 
-Most note apps ask you to organize as you write. Dayora doesn't — dump
-whatever's on your mind into a note, and when you're ready, hand it to Gemini
-and get back an actual schedule: times, order, meals, habits, all slotted in
-around what you told it matters to you.
+<!-- LAYOUT SECTION 1: Text Left / Image Right -->
+<table border="0">
+  <tr>
+    <!-- Left Column: Text (Vertically Centered) -->
+    <td width="40%" align="left" valign="middle">
+Most note apps ask you to organize as you write. Dayora doesn't — dump whatever's on your mind into a note, and when you're ready, hand it to Gemini and get back an actual schedule: times, order, meals, habits, all slotted in around what you told it matters to you.
+    </td>
+    <!-- Right Column: Image and Caption (Large Image) -->
+    <td width="60%" align="center">
+      <img src="./Dayora-planner.webp" alt="Dayora AI Plan Generator turning a list of tasks into a structured daily plan" width="100%">      
+    </td>
+  </tr>
+</table>
 
-<p align="center">
-  <img src="./Dayora-planner.webp" alt="Dayora AI Plan Generator turning a list of tasks into a structured daily plan" width="90%">
-</p>
+<br> <!-- Spacing -->
 
-<p align="center"><sub>Type it like you'd tell a friend. Dayora turns it into a plan.</sub></p>
+<!-- LAYOUT SECTION 2: Text Right / Image Left (Opposite) -->
+<table border="0">
+  <tr>
+    <!-- Left Column: Image and Caption (Large Image) -->
+    <td width="60%" align="center">
+      <img src="./Dayora-settings.webp" alt="Dayora settings overview showing profile type, daily schedule, tracked habits, and goals" width="100%">      
+    </td>
+    <!-- Right Column: Text (Vertically Centered) -->
+    <td width="40%" align="left" valign="middle">
+The planning isn't generic, either — Dayora knows your schedule, your habits, and your goals, and folds them into every plan it generates.
+    </td>
+  </tr>
+</table>
 
-The planning isn't generic, either — Dayora knows your schedule, your habits,
-and your goals, and folds them into every plan it generates.
-
-<p align="center">
-  <img src="./Dayora-settings.webp" alt="Dayora settings overview showing profile type, daily schedule, tracked habits, and goals" width="90%">
-</p>
+<br>
 
 ## Features
 
