@@ -5,6 +5,10 @@
 <h1 align="center">Dayora</h1>
 <p align="center"><strong>Write down whatever's in your head. Planning let on us.</strong></p>
 
+<p align="center">
+  <a href="https://dayora.jakubkuzel.com">dayora.jakubkuzel.com</a>
+</p>
+
 
 <p align="center">
   <img src="./Dayora-screenshot.png" alt="Dayora note-taking interface with folders, a note list, and a checklist editor" width="90%">
