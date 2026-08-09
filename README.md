@@ -9,6 +9,7 @@
   <a href="https://dayora.jakubkuzel.com">dayora.jakubkuzel.com</a>
 </p>
 
+<br>
 
 <p align="center">
   <img src="./Dayora-screenshot.png" alt="Dayora note-taking interface with folders, a note list, and a checklist editor" width="90%">
