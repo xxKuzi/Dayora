@@ -1069,27 +1069,6 @@ export default function DailyPlan({
           </div>
 
           <div className="relative bg-white/85 dark:bg-black/45 rounded-2xl p-6 border border-black/20 dark:border-white/5 backdrop-blur-md">
-            {useAIMode &&
-              (useTableMode ? (
-                <div className="absolute top-6 right-6 hidden sm:flex items-center gap-1.5 px-3 py-1 bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/20 dark:border-purple-500/30 rounded-lg text-purple-700 dark:text-purple-300 z-20">
-                  <span className="text-xs">💡</span>
-                  <span className="text-[11px] font-medium leading-none">
-                    Use <strong>Tab</strong> and <strong>Shift+Tab</strong> to
-                    navigate
-                  </span>
-                </div>
-              ) : (
-                <div className="absolute top-6 right-6 hidden sm:flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 dark:border-blue-500/30 rounded-lg text-blue-700 dark:text-blue-300 z-20">
-                  <span className="text-xs">⌨️</span>
-                  <span className="text-[11px] font-medium leading-none">
-                    Press{" "}
-                    <kbd className="px-1 py-0.5 bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded text-[10px] font-mono text-zinc-700 dark:text-zinc-300">
-                      Cmd+Enter
-                    </kbd>{" "}
-                    to generate plan
-                  </span>
-                </div>
-              ))}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
                 <h3 className="text-xl font-semibold text-zinc-900 dark:text-white">
@@ -1123,6 +1102,28 @@ export default function DailyPlan({
                 )}
               </div>
             </div>
+
+            {useAIMode &&
+              (useTableMode ? (
+                <div className="hidden sm:flex w-max mt-1 mb-4 lg:mt-0 lg:mb-0 lg:absolute lg:top-6 lg:right-6 items-center gap-1.5 px-3 py-1 bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/20 dark:border-purple-500/30 rounded-lg text-purple-700 dark:text-purple-300 z-20">
+                  <span className="text-xs">💡</span>
+                  <span className="text-[11px] font-medium leading-none">
+                    Use <strong>Tab</strong> and <strong>Shift+Tab</strong> to
+                    navigate
+                  </span>
+                </div>
+              ) : (
+                <div className="hidden sm:flex w-max mt-1 mb-4 lg:mt-0 lg:mb-0 lg:absolute lg:top-6 lg:right-6 items-center gap-1.5 px-3 py-1 bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 dark:border-blue-500/30 rounded-lg text-blue-700 dark:text-blue-300 z-20">
+                  <span className="text-xs">⌨️</span>
+                  <span className="text-[11px] font-medium leading-none">
+                    Press{" "}
+                    <kbd className="px-1 py-0.5 bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded text-[10px] font-mono text-zinc-700 dark:text-zinc-300">
+                      Cmd+Enter
+                    </kbd>{" "}
+                    to generate plan
+                  </span>
+                </div>
+              ))}
 
             {!useAIMode ? (
               // Manual mode - always show table

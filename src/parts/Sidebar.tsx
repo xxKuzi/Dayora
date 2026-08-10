@@ -104,7 +104,7 @@ export default function Sidebar({
             >
               <span>{view.label}</span>
               <kbd
-                className={`text-[10px] px-1.5 py-0.5 rounded font-mono border transition-colors ${
+                className={`hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded font-mono border transition-colors ${
                   activeView === view.id
                     ? "bg-white/20 border-white/20 text-white"
                     : "bg-zinc-200/60 dark:bg-zinc-800/60 border-zinc-300/40 dark:border-zinc-700/40 text-zinc-400 dark:text-zinc-500"
