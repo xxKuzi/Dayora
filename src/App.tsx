@@ -592,12 +592,19 @@ const isDark = document.documentElement.classList.toggle('dark');
           } else {
             // First sign in migration: Upload local data to Firestore
             const batch = writeBatch(db!);
-            batch.set(userDocRef, {
-              settings,
-              darkMode,
-              comfortableTyping,
-              cookiePreference: "accepted",
-            });
+            // merge, so a user who already has a stripeId does not lose it
+            // (and their Pro status with it) by signing in on a device that
+            // still holds local data.
+            batch.set(
+              userDocRef,
+              {
+                settings,
+                darkMode,
+                comfortableTyping,
+                cookiePreference: "accepted",
+              },
+              { merge: true },
+            );
 
             folders.forEach((f) => {
               batch.set(
